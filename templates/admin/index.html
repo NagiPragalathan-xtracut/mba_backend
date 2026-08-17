@@ -1,0 +1,126 @@
+{% extends "unfold/layouts/base_simple.html" %}
+{% load i18n %}
+
+{#
+  Admin landing page.
+
+  Overrides Unfold's stock index to put the numbers an editor actually needs
+  first: how much content exists, how much is still a draft, and what was
+  touched most recently. The context is built by
+  apps.core.admin.dashboard.dashboard_callback.
+#}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="flex flex-col gap-8">
+
+        {# ---------------------------------------------------------- #}
+        {# Content counters                                            #}
+        {# ---------------------------------------------------------- #}
+        <section>
+            <h2 class="font-semibold mb-4 text-font-important-light text-lg dark:text-font-important-dark">
+                {% trans "Content at a glance" %}
+            </h2>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {% for card in stats %}
+                    <div class="bg-white border border-base-200 flex flex-col p-5 rounded-default shadow-xs dark:bg-base-900 dark:border-base-800">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-primary-600 dark:text-primary-500">{{ card.icon }}</span>
+                            <span class="font-medium text-font-important-light dark:text-font-important-dark">{{ card.title }}</span>
+                        </div>
+
+                        <div class="font-semibold text-3xl text-font-important-light dark:text-font-important-dark">
+                            {{ card.total }}
+                        </div>
+                        <div class="mt-1 text-font-subtle-light text-sm dark:text-font-subtle-dark">
+                            {{ card.published }} {% trans "live" %}
+                            {% if card.hidden %}
+                                &middot; {{ card.hidden }} {% trans "hidden" %}
+                            {% endif %}
+                        </div>
+
+                        <div class="border-base-200 border-t flex gap-4 mt-4 pt-4 text-sm dark:border-base-800">
+                            <a href="{{ card.url }}" class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-500">
+                                {% trans "View all" %}
+                            </a>
+                            <a href="{{ card.add_url }}" class="font-medium text-font-subtle-light hover:text-primary-600 dark:text-font-subtle-dark">
+                                {% trans "Add new" %}
+                            </a>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-font-subtle-light dark:text-font-subtle-dark">{% trans "No content models available." %}</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="flex flex-col gap-8 lg:flex-row">
+
+            {# ------------------------------------------------------ #}
+            {# Recent activity                                         #}
+            {# ------------------------------------------------------ #}
+            <section class="grow">
+                <h2 class="font-semibold mb-4 text-font-important-light text-lg dark:text-font-important-dark">
+                    {% trans "Recently edited" %}
+                </h2>
+
+                <div class="bg-white border border-base-200 divide-y divide-base-200 rounded-default shadow-xs dark:bg-base-900 dark:border-base-800 dark:divide-base-800">
+                    {% for entry in recent_activity %}
+                        <a href="{{ entry.url }}" class="block hover:bg-base-50 p-4 transition dark:hover:bg-base-800">
+                            <div class="flex items-center justify-between gap-4">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="bg-base-100 font-medium px-2 py-0.5 rounded text-xs text-font-subtle-light dark:bg-base-800 dark:text-font-subtle-dark">
+                                            {{ entry.label }}
+                                        </span>
+                                        {% if not entry.is_published %}
+                                            <span class="bg-red-100 font-medium px-2 py-0.5 rounded text-red-700 text-xs dark:bg-red-500/20 dark:text-red-400">
+                                                {% trans "Draft" %}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mt-1 truncate text-font-important-light dark:text-font-important-dark">
+                                        {{ entry.title }}
+                                    </div>
+                                </div>
+                                <div class="shrink-0 text-font-subtle-light text-sm dark:text-font-subtle-dark">
+                                    {{ entry.updated_at|timesince }} {% trans "ago" %}
+                                </div>
+                            </div>
+                        </a>
+                    {% empty %}
+                        <p class="p-4 text-font-subtle-light dark:text-font-subtle-dark">
+                            {% trans "Nothing has been edited yet." %}
+                        </p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            {# ------------------------------------------------------ #}
+            {# Quick links + full app list                             #}
+            {# ------------------------------------------------------ #}
+            <section class="lg:w-80 shrink-0">
+                <h2 class="font-semibold mb-4 text-font-important-light text-lg dark:text-font-important-dark">
+                    {% trans "Developer tools" %}
+                </h2>
+
+                <div class="bg-white border border-base-200 divide-y divide-base-200 mb-8 rounded-default shadow-xs dark:bg-base-900 dark:border-base-800 dark:divide-base-800">
+                    {% for link in quick_links %}
+                        <a href="{{ link.url }}" class="flex gap-3 hover:bg-base-50 items-center p-4 transition dark:hover:bg-base-800">
+                            <span class="material-symbols-outlined text-font-subtle-light dark:text-font-subtle-dark">{{ link.icon }}</span>
+                            <span class="text-font-important-light dark:text-font-important-dark">{{ link.title }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+
+                {% include "unfold/helpers/app_list_default.html" %}
+            </section>
+        </div>
+    </div>
+{% endblock %}

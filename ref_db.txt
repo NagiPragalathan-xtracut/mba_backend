@@ -1,0 +1,309 @@
+from django.db import models
+from django.utils import timezone
+from django.utils.text import slugify
+from ckeditor.fields import RichTextField
+from base.models.department_model import Department, SEOMixin
+from base.fields import SVGImageField
+import uuid
+import re
+
+
+class Designation(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+
+
+class Faculty(SEOMixin):
+    name = models.CharField(max_length=255, blank=True, null=True)
+    slug = models.SlugField(max_length=255, blank=True, null=True, unique=True, help_text="URL-friendly identifier (auto-generated from name if not provided)")
+    alt = models.CharField(max_length=255, help_text="Alt text for image", blank=True, null=True)
+    image = SVGImageField(upload_to='kalinga_backend/files/faculty/images/', blank=True, null=True)
+    designation = models.ForeignKey(Designation, on_delete=models.SET_NULL, null=True, blank=True, related_name='faculty_members')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='faculty_members')
+    mail_id = models.EmailField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    link = models.URLField(blank=True, null=True, help_text="Personal website or profile link")
+    qualification = models.CharField(max_length=500, help_text="Educational qualifications", blank=True, null=True)
+    bio = RichTextField(help_text="Biography", blank=True, null=True)
+    publication = RichTextField(blank=True, null=True, help_text="Publications and research papers")
+    awards = RichTextField(blank=True, null=True, help_text="Awards and recognitions")
+    workshop = RichTextField(blank=True, null=True, help_text="Workshops conducted/attended")
+    work_experience = RichTextField(blank=True, null=True, help_text="Work experience details")
+    projects = RichTextField(blank=True, null=True, help_text="Projects handled")
+
+    # Override timestamps for existing model
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        designation_name = self.designation.name if self.designation else ""
+        return f"{self.name or ''} - {designation_name}"
+
+    def clean_text(self, text):
+        """Remove HTML tags and clean text for SEO fields"""
+        if not text:
+            return ""
+        # Remove HTML tags
+        text = re.sub(r'<[^>]+>', '', str(text))
+        # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text)
+        # Strip leading/trailing whitespace
+        return text.strip()
+
+    def generate_seo_data(self):
+        """Generate SEO data for faculty - all fields auto-generated without HTML"""
+        # Auto-generate slug from name if not provided
+        if not self.slug and self.name:
+            base_slug = slugify(self.name)
+            # Ensure uniqueness
+            if self.id:
+                existing = Faculty.objects.filter(slug=base_slug).exclude(id=self.id).exists()
+            else:
+                existing = Faculty.objects.filter(slug=base_slug).exists()
+            
+            if existing:
+                # Add unique suffix
+                counter = 1
+                while Faculty.objects.filter(slug=f"{base_slug}-{counter}").exists():
+                    counter += 1
+                self.slug = f"{base_slug}-{counter}"
+            else:
+                self.slug = base_slug
+        
+        # Clean name and designation for use in titles (remove any HTML)
+        clean_name = self.clean_text(self.name) if self.name else "Faculty"
+        desig = self.clean_text(self.designation.name) if self.designation else "Faculty"
+        dept = self.department.name if self.department else ""
+        
+        # Auto-generate meta_title (no HTML)
+        if not self.meta_title:
+            connector = f" at {dept}" if dept else ""
+            self.meta_title = f"{clean_name} - {desig}{connector} | Kalinga College"
+        else:
+            self.meta_title = self.clean_text(self.meta_title)
+
+        # Auto-generate meta_description (no HTML, strip tags)
+        if not self.meta_description:
+            description_parts = []
+            if self.bio:
+                bio_text = self.clean_text(self.bio)
+                description_parts.append(bio_text[:150])
+            if self.qualification:
+                qual_text = self.clean_text(self.qualification)
+                description_parts.append(qual_text[:150])
+            
+            tail = f", {desig}{' at ' + dept if dept else ''}" if (clean_name or desig or dept) else ""
+            self.meta_description = " | ".join(description_parts) if description_parts else f"Learn about {clean_name}{tail}"
+        else:
+            # Clean existing meta_description if it has HTML
+            self.meta_description = self.clean_text(self.meta_description)[:160]
+
+        # Auto-generate canonical_url (flexible - supports relative paths)
+        if not self.canonical_url:
+            if self.slug:
+                self.canonical_url = f"/faculty/{self.slug}/"
+            elif self.id:
+                self.canonical_url = f"/faculty/{self.id}/"
+            else:
+                self.canonical_url = "/faculty/"
+        # Ensure canonical_url starts with / (for relative paths)
+        elif self.canonical_url and not self.canonical_url.startswith('http') and not self.canonical_url.startswith('/'):
+            self.canonical_url = f"/{self.canonical_url}"
+
+        # Auto-generate og_title (no HTML)
+        if not self.og_title:
+            self.og_title = f"{clean_name} - {desig}".strip(" -")
+        else:
+            self.og_title = self.clean_text(self.og_title)
+
+        # Auto-generate og_description (no HTML)
+        if not self.og_description:
+            clean_desc = self.clean_text(self.meta_description) if self.meta_description else f"Learn about {clean_name}"
+            self.og_description = clean_desc[:200]
+        else:
+            self.og_description = self.clean_text(self.og_description)[:200]
+
+        if not self.og_image and self.image:
+            self.og_image = self.image.url
+
+        # Auto-generate twitter_title (no HTML)
+        if not self.twitter_title:
+            clean_title = self.clean_text(self.og_title) if self.og_title else clean_name
+            self.twitter_title = clean_title[:70]
+        else:
+            self.twitter_title = self.clean_text(self.twitter_title)[:70]
+
+        # Auto-generate twitter_description (no HTML)
+        if not self.twitter_description:
+            clean_desc = self.clean_text(self.og_description) if self.og_description else f"Learn about {clean_name}"
+            self.twitter_description = clean_desc[:200]
+        else:
+            self.twitter_description = self.clean_text(self.twitter_description)[:200]
+
+        if not self.twitter_image:
+            self.twitter_image = self.og_image
+
+        # Auto-generate keywords (no HTML)
+        if not self.keywords:
+            keywords = []
+            if clean_name:
+                keywords.extend(clean_name.lower().split()[:3])  # First 3 words from name
+            if desig:
+                keywords.append(desig.lower())
+            if dept:
+                keywords.append(dept.lower())
+            if self.qualification:
+                qual_clean = self.clean_text(self.qualification)
+                keywords.extend([word.strip() for word in qual_clean.split() if len(word) > 3][:5])
+            self.keywords = ", ".join(keywords[:10]) if keywords else ""
+        else:
+            # Clean existing keywords if needed
+            self.keywords = self.clean_text(self.keywords)
+
+        if not self.author:
+            self.author = "Kalinga College"
+
+        # Auto-generate schema.org JSON-LD for Person (no HTML in fields)
+        if not self.schema_json:
+            clean_schema_desc = self.clean_text(self.meta_description)[:500] if self.meta_description else f"Faculty member at Kalinga College"
+            
+            # Build full URL for canonical
+            if self.canonical_url.startswith('http'):
+                full_url = self.canonical_url
+            else:
+                full_url = f"https://kalingacollege.edu.in{self.canonical_url}"
+            
+            schema = {
+                "@context": "https://schema.org",
+                "@type": "Person",
+                "name": clean_name,
+                "jobTitle": desig,
+                "worksFor": {
+                    "@type": "EducationalOrganization",
+                    "name": "Kalinga College"
+                },
+                "description": clean_schema_desc,
+                "url": self.link if self.link else full_url
+            }
+            
+            if self.mail_id:
+                schema["email"] = self.mail_id
+            if self.phone_number:
+                schema["telephone"] = self.phone_number
+            if self.image:
+                schema["image"] = self.image.url
+            
+            import json
+            self.schema_json = json.dumps(schema)
+
+    class Meta:
+        ordering = ['name']
+        unique_together = ['name', 'department']
+
+
+class FacultyBanner(models.Model):
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='banners')
+    image = SVGImageField(upload_to='kalinga_backend/files/faculty/banners/', blank=True, null=True)
+    alt = models.CharField(max_length=255, help_text="Alt text for banner image", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Banner for {self.faculty.name}"
+
+    class Meta:
+        ordering = ['-created_at'] 
+
+
+---
+
+from django.db import models
+from django.utils.text import slugify
+from ckeditor.fields import RichTextField
+from base.models.department_model import Department
+from base.fields import SVGImageField
+import uuid
+
+
+class BlogCategory(models.Model):
+    """Categories for blogs"""
+    name = models.CharField(max_length=255, unique=True, help_text="Category name")
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Blog Category"
+        verbose_name_plural = "Blog Categories"
+
+
+class Blog(models.Model):
+    """Blog posts"""
+    image = SVGImageField(upload_to='kalinga_backend/files/blog/', blank=True, null=True, help_text="Blog featured image")
+    image_alt = models.CharField(max_length=255, blank=True, null=True, help_text="Alt text for image")
+    title = models.CharField(max_length=255, help_text="Blog title")
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, help_text="URL-friendly identifier (auto-generated)")
+    description = RichTextField(help_text="Blog content")
+    date = models.DateField(help_text="Publication date")
+    categories = models.ManyToManyField(BlogCategory, related_name='blogs', blank=True, help_text="Blog categories")
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='blogs')
+    author = models.CharField(max_length=255, blank=True, null=True, help_text="Author name")
+    is_published = models.BooleanField(default=True, help_text="Published status")
+    is_featured = models.BooleanField(default=False, help_text="Featured blog")
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            while Blog.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+        verbose_name = "Blog"
+        verbose_name_plural = "Blogs"
+
+
+class BlogImage(models.Model):
+    """Additional images for blogs"""
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='images')
+    image = SVGImageField(upload_to='kalinga_backend/files/blog/images/', help_text="Blog image")
+    alt = models.CharField(max_length=255, help_text="Alt text for image")
+    caption = models.CharField(max_length=500, blank=True, null=True, help_text="Image caption")
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.blog.title} - {self.alt}"
+
+    class Meta:
+        ordering = ['blog', 'id']
+        verbose_name = "Blog Image"
+        verbose_name_plural = "Blog Images"
+
+---
+
+

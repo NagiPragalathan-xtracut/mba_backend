@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "MCP client configuration for the MBU backend.",
+    "Copy this to your MCP client's config file and adjust the paths:",
+    "  Claude Desktop (Windows): %APPDATA%\\Claude\\claude_desktop_config.json",
+    "  Claude Desktop (macOS):   ~/Library/Application Support/Claude/claude_desktop_config.json",
+    "  Claude Code:              .mcp.json in the project root, or `claude mcp add`",
+    "",
+    "Then restart the client. See docs/mcp.md for the full walkthrough.",
+    "",
+    "The `env` block overrides anything in the project's .env file, so a single",
+    "checkout can serve one client against local and another against production."
+  ],
+
+  "mcpServers": {
+    "mbu-backend": {
+      "command": "python",
+      "args": ["-m", "mcp_server"],
+      "cwd": "C:\\Users\\Admin\\Documents\\Work\\mbu_backend",
+      "env": {
+        "MBU_API_BASE_URL": "http://127.0.0.1:8000",
+        "MBU_API_TOKEN": "paste-the-token-from-create_api_token-here",
+        "MBU_API_TIMEOUT": "60"
+      }
+    }
+  }
+}

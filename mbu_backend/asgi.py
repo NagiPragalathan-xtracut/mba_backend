@@ -1,0 +1,14 @@
+"""
+ASGI config for mbu_backend project.
+
+It exposes the ASGI callable as a module-level variable named ``application``.
+"""
+
+import os
+
+from django.core.asgi import get_asgi_application
+
+environment = os.environ.get("DJANGO_ENV", "development")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", f"mbu_backend.settings.{environment}")
+
+application = get_asgi_application()

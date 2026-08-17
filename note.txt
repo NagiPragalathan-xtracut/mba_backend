@@ -1,0 +1,28 @@
+scratch: - kalinga
+events:
+- name, slug
+- event cat - upcomming, achivements
+- dep cat - multiple
+- ckeditor content
+- photo - multiple
+- one feature image from uploaded image
+- display_order 
+
+blog:
+- name, slug
+- event cat - upcomming, achivements
+- dep cat - multiple
+- ckeditor content
+- photo - multiple
+- one feature image  
+
+facultys:
+- slug
+- name
+- photo
+- department - multiple
+- desigination
+- qualification
+- phn no. (opt)
+- mail id (opt)
+- heading - ckeditor show can be increase the set by clicking the "+" icon in the admin dashbaord

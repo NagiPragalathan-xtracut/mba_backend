@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# MBU Backend - Python dependencies
+# Keep this file in sync with the code: add a package the moment it is used.
+# ---------------------------------------------------------------------------
+
+# Core framework
+Django==5.2.12
+django-environ==0.13.0
+
+# Admin UI
+django-unfold==0.74.1
+
+# Rich text editing
+django-ckeditor==6.7.0
+django-js-asset==3.1.2
+
+# REST API
+djangorestframework==3.17.1
+django-filter==25.2
+django-cors-headers==4.9.0
+drf-spectacular==0.29.0
+
+# Media handling
+pillow==12.0.0
+
+# MCP server (Claude integration)
+mcp==1.27.0
+httpx==0.28.1
+
+# Production server (optional, used by the deployment docs)
+gunicorn==23.0.0 ; sys_platform != "win32"
+whitenoise==6.9.0
