@@ -6,4 +6,8 @@ admin landing page, and one module per registered model.
 
 from .department import DepartmentAdmin
 
-__all__ = ["DepartmentAdmin"]
+# Imported for the side effect of re-registering Django's and DRF's admins
+# with Unfold styling.
+from . import third_party  # noqa: F401  isort:skip
+
+__all__ = ["DepartmentAdmin", "third_party"]

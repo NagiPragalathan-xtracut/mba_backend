@@ -177,6 +177,39 @@ for raster formats and falls back to an XML check whose root element must be
 `<svg>` — detected from the *content*, so a renamed file cannot smuggle
 arbitrary markup through.
 
+## Rich text editing
+
+Long-form content (`Event.content`, `Blog.content`, `FacultySection.content`)
+uses CKEditor through `django-ckeditor`, with two toolbars configured in
+`settings/base.py`: `default` (full) and `compact` (faculty sections).
+
+Two configuration details are deliberate:
+
+- `filebrowserUploadMethod: "form"` — the CSRF-safe upload path
+  `django-ckeditor` recommends. The trade-off is that pasting an image
+  straight into the editor does not auto-upload; the image dialog's upload tab
+  does. CKEditor logs a `clipboard-image-handling-disabled` notice about this.
+- `versionCheck: False` — CKEditor 4 otherwise renders a red "this version is
+  not secure" banner **inside the editor body**, where content editors see it.
+  The notice is aimed at developers, so it is turned off in the UI.
+
+### Known limitation: CKEditor 4 is end-of-life
+
+`django-ckeditor` 6.7.0 bundles CKEditor 4.22.1. CKEditor 4 reached end of
+life in 2023 and further security patches are only available under a
+commercial LTS licence. Turning off `versionCheck` hides the banner; it does
+not change that fact.
+
+Current exposure is limited — the editor is only reachable by authenticated
+staff behind `/admin/`, and the upload endpoints are staff-gated (verified:
+`/ckeditor/upload/` and `/ckeditor/browse/` both redirect to the login page).
+
+If the editor needs to be replaced, the blast radius is small: three model
+fields and the `CKEDITOR_CONFIGS` block. The realistic options are
+`django-ckeditor-5` (CKEditor 5, actively maintained, GPL or commercial) or
+`django-tinymce`. Rich text is stored as HTML in a plain text column, so no
+data migration is required.
+
 ## API design
 
 - **Slug-addressed relations.** `{"departments": ["cse", "ece"]}` rather than

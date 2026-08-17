@@ -238,9 +238,18 @@ CKEDITOR_IMAGE_BACKEND = "pillow"
 CKEDITOR_RESTRICT_BY_USER = False
 CKEDITOR_BROWSE_SHOW_DIRS = True
 
+# CKEditor 4 shows an "this version is not secure" notification *inside the
+# editor body* and logs it to the console. It is aimed at developers, but it is
+# content editors who would see the red banner in the middle of their text
+# area, so it is turned off in both toolbars below via `versionCheck`.
+#
+# Suppressing the notice does not change the underlying fact: django-ckeditor
+# bundles CKEditor 4, which is end-of-life. See docs/architecture.md for the
+# migration options.
 CKEDITOR_CONFIGS = {
     "default": {
         "skin": "moono-lisa",
+        "versionCheck": False,
         "toolbar": "MBU",
         "toolbar_MBU": [
             {"name": "styles", "items": ["Format", "Styles"]},
@@ -272,6 +281,7 @@ CKEDITOR_CONFIGS = {
     # A lighter editor for short blocks such as faculty section bodies.
     "compact": {
         "skin": "moono-lisa",
+        "versionCheck": False,
         "toolbar": "Compact",
         "toolbar_Compact": [
             {"name": "basicstyles", "items": ["Bold", "Italic", "Underline", "-", "RemoveFormat"]},
