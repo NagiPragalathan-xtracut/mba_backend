@@ -21,8 +21,11 @@ django-cors-headers==4.9.0
 drf-spectacular==0.29.0
 
 # Database drivers
-# SQLite needs nothing; mysqlclient is Django's supported MySQL driver.
-mysqlclient==2.2.8
+# SQLite needs nothing. PyMySQL is a pure-Python MySQL driver, chosen over the
+# faster C-based `mysqlclient` because serverless build images (Vercel) have no
+# MySQL client headers to compile it against. `mbu_backend/__init__.py` still
+# prefers mysqlclient when a host happens to provide it.
+PyMySQL==1.1.2
 
 # Media handling
 pillow==12.0.0

@@ -11,6 +11,8 @@ from pathlib import Path
 import environ
 from django.urls import reverse_lazy
 
+from mbu_backend import USING_PYMYSQL
+
 from .storage import build_media_storage
 
 # ---------------------------------------------------------------------------
@@ -157,10 +159,17 @@ if DATABASES["default"]["ENGINE"].endswith("mysql"):
     # VERIFY_IDENTITY) to authenticate the server as well.
     ssl_mode = env.str("DATABASE_SSL_MODE", default="REQUIRED").upper()
     if ssl_mode != "DISABLED":
-        options.setdefault("ssl_mode", ssl_mode)
         ssl_ca = env.str("DATABASE_SSL_CA", default="")
-        if ssl_ca:
-            options.setdefault("ssl", {"ca": ssl_ca})
+        if USING_PYMYSQL:
+            # PyMySQL has no `ssl_mode` argument - passing one raises TypeError.
+            # It enables TLS whenever `ssl` is a non-empty dict, so the mode is
+            # carried inside it purely to keep the dict truthy when no CA is
+            # configured. Certificate verification needs an explicit CA bundle.
+            options.setdefault("ssl", {"ca": ssl_ca} if ssl_ca else {"ssl_mode": ssl_mode})
+        else:
+            options.setdefault("ssl_mode", ssl_mode)
+            if ssl_ca:
+                options.setdefault("ssl", {"ca": ssl_ca})
 
     # Reuse connections between requests; MySQL handshakes are expensive over a
     # network link. `CONN_HEALTH_CHECKS` discards ones the server has dropped.
