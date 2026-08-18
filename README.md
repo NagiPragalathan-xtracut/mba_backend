@@ -2,7 +2,7 @@
 
 Content backend for the Mohan Babu University website. It manages three kinds
 of content — **events**, **blogs** and **faculty profiles** — and exposes them
-three ways:
+three ways: 
 
 | Surface | For | Where |
 | --- | --- | --- |
