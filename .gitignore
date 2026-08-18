@@ -32,6 +32,7 @@ db.sqlite3
 db.sqlite3-journal
 *.log
 staticfiles/
+staticfiles_build/
 media/
 
 # Keep the media directory itself so uploads have somewhere to land

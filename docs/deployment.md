@@ -303,6 +303,7 @@ Settings live in `mbu_backend/settings/vercel.py`, selected by `DJANGO_ENV=verce
 | --- | --- |
 | `vercel.json` | Builds the WSGI function and the static bundle, routes requests |
 | `build_files.sh` | Build step: installs requirements, runs `collectstatic` |
+| `staticfiles_build/static/` | Build output. Vercel publishes the *contents* of `staticfiles_build/` at the site root, so the nested `static/` folder is what makes `/static/...` resolve. `distDir` and `STATIC_ROOT` must name the same directory. |
 | `.vercelignore` | Keeps the function small; excludes `.env`, media, tests, docs, the MCP server |
 | `mbu_backend/settings/vercel.py` | Serverless-specific settings |
 

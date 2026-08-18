@@ -24,7 +24,7 @@ process, which changes four things compared with `production.py`:
 from django.core.exceptions import ImproperlyConfigured
 
 from .production import *  # noqa: F401,F403
-from .production import DATABASES, env
+from .production import BASE_DIR, DATABASES, env
 
 # ---------------------------------------------------------------------------
 # Media - S3 is mandatory on a read-only filesystem
@@ -54,6 +54,13 @@ SECURE_SSL_REDIRECT = False
 # ---------------------------------------------------------------------------
 # Static files - collected during the build, served by the CDN
 # ---------------------------------------------------------------------------
+
+# Vercel serves the build output directory's *contents* at the site root, so a
+# file collected to `<distDir>/x.css` is published at `/x.css`. Collecting into
+# a nested `static/` folder is therefore what makes `/static/x.css` - the URL
+# Django writes into every template - actually resolve. `distDir` in
+# vercel.json must stay in sync with the directory named here.
+STATIC_ROOT = BASE_DIR / "staticfiles_build" / "static"
 
 STORAGES = {
     **globals()["STORAGES"],
