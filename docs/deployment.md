@@ -289,6 +289,104 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
+## Vercel (serverless)
+
+Vercel runs Django as a short-lived function rather than a persistent process.
+That works for this API, but it constrains what the app may do — read
+"Constraints" below before committing to it.
+
+Settings live in `mbu_backend/settings/vercel.py`, selected by `DJANGO_ENV=vercel`.
+
+### Files involved
+
+| File | Purpose |
+| --- | --- |
+| `vercel.json` | Builds the WSGI function and the static bundle, routes requests |
+| `build_files.sh` | Build step: installs requirements, runs `collectstatic` |
+| `.vercelignore` | Keeps the function small; excludes `.env`, media, tests, docs, the MCP server |
+| `mbu_backend/settings/vercel.py` | Serverless-specific settings |
+
+`mbu_backend/wsgi.py` exposes `app` alongside `application` because Vercel's
+Python runtime looks for the former.
+
+### Environment variables
+
+Set these in the Vercel dashboard under *Settings → Environment Variables*, for
+Production **and** Preview (a preview deployment with no database fails at
+import, not at request time):
+
+```
+DJANGO_ENV=vercel
+DJANGO_SECRET_KEY=<50+ random characters>
+DJANGO_ALLOWED_HOSTS=api.example.edu
+DJANGO_CSRF_TRUSTED_ORIGINS=https://api.example.edu
+
+DATABASE_URL=mysql://user:password@host:3306/dbname
+
+SITE_BASE_URL=https://www.example.edu
+SITE_NAME=<institution name>
+CORS_ALLOWED_ORIGINS=https://www.example.edu
+CORS_ALLOW_ALL_ORIGINS=False
+
+USE_S3=True
+AWS_STORAGE_BUCKET_NAME=<bucket>
+AWS_S3_REGION_NAME=ap-south-1
+AWS_ACCESS_KEY_ID=<key id>
+AWS_SECRET_ACCESS_KEY=<secret>
+```
+
+`*.vercel.app` is trusted automatically, so preview URLs work without listing
+each one.
+
+`USE_S3=True` is **mandatory** here. The settings module raises
+`ImproperlyConfigured` at startup without it, because a serverless filesystem is
+read-only and every upload would fail with an obscure permission error instead.
+
+### Deploy
+
+```bash
+npm i -g vercel
+vercel login
+vercel            # preview deployment
+vercel --prod     # production
+```
+
+Or connect the Git repository in the dashboard and let pushes deploy.
+
+### Migrations
+
+Vercel has no shell, and the build step must not migrate — builds run
+concurrently and would race. Run migrations from a machine that can reach the
+database, pointed at the same `DATABASE_URL`:
+
+```bash
+python manage.py migrate
+python manage.py createsuperuser   # first deploy only
+```
+
+### Constraints
+
+Know these before choosing Vercel over a normal server:
+
+- **Function timeout.** 10s on Hobby, 60s on Pro. Bulk admin actions and large
+  CKEditor uploads can exceed it. A long import job needs to run elsewhere.
+- **Cold starts.** An idle function takes a second or two to answer the first
+  request. Noticeable in the admin, irrelevant to a CDN-cached frontend.
+- **No background work.** No cron, no queues, no long-running processes. The
+  MCP server in particular cannot run here — it is excluded in `.vercelignore`
+  and needs its own host.
+- **Bundle size.** The function must stay under 250 MB unzipped. Django, boto3,
+  Pillow and mysqlclient fit comfortably; adding heavy scientific packages
+  would not.
+- **No local file writes.** Anything writing outside `/tmp` fails. This is why
+  media must be on S3.
+- **Database connections.** `CONN_MAX_AGE` is forced to 0. Each invocation
+  opens and closes its own connection, so a busy site makes many short-lived
+  connections — make sure the database's connection limit allows for it.
+
+If any of those bite, a small VM or container with gunicorn behind nginx (the
+sections above) is the simpler answer and costs about the same.
+
 ## nginx
 
 WhiteNoise handles static files, but nginx should serve uploaded media directly

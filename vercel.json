@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    {
+      "src": "mbu_backend/wsgi.py",
+      "use": "@vercel/python",
+      "config": { "maxLambdaSize": "40mb", "runtime": "python3.12" }
+    },
+    {
+      "src": "build_files.sh",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "staticfiles" }
+    }
+  ],
+  "routes": [
+    { "src": "/static/(.*)", "dest": "/static/$1" },
+    { "src": "/(.*)", "dest": "mbu_backend/wsgi.py" }
+  ],
+  "env": {
+    "DJANGO_ENV": "vercel"
+  }
+}

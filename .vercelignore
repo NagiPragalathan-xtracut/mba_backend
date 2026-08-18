@@ -1,0 +1,20 @@
+# Keep the function bundle small and free of anything that must never ship.
+.env
+.env.*
+!.env.example
+
+db.sqlite3
+db.sqlite3-journal
+media/
+docs/
+tests/
+note.txt
+ref_db.txt
+
+# The MCP server is a separate long-running process; it cannot run serverless.
+mcp_server/
+mcp.example.json
+
+__pycache__/
+*.py[cod]
+.git/
