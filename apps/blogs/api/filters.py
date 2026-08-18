@@ -10,6 +10,7 @@ class BlogFilter(django_filters.FilterSet):
 
     category = django_filters.CharFilter(field_name="categories__slug", lookup_expr="iexact", distinct=True)
     department = django_filters.CharFilter(field_name="departments__slug", lookup_expr="iexact", distinct=True)
+    course = django_filters.CharFilter(field_name="courses__slug", lookup_expr="iexact", distinct=True)
     author = django_filters.CharFilter(field_name="author_name", lookup_expr="icontains")
     date_from = django_filters.DateFilter(field_name="published_date", lookup_expr="gte")
     date_to = django_filters.DateFilter(field_name="published_date", lookup_expr="lte")
@@ -17,4 +18,4 @@ class BlogFilter(django_filters.FilterSet):
 
     class Meta:
         model = Blog
-        fields = ["category", "department", "author", "is_featured", "is_published", "date_from", "date_to", "year"]
+        fields = ["category", "department", "course", "author", "is_featured", "is_published", "date_from", "date_to", "year"]

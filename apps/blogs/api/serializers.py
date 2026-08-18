@@ -4,12 +4,13 @@ from rest_framework import serializers
 
 from apps.blogs.models import Blog, BlogCategory, BlogImage
 from apps.core.api.serializers import (
+    CourseBriefSerializer,
     DepartmentBriefSerializer,
     SEOModelSerializerMixin,
     TaxonomySerializer,
     WritableSlugRelatedField,
 )
-from apps.core.models import Department
+from apps.core.models import Course, Department
 
 
 class BlogCategorySerializer(TaxonomySerializer):
@@ -60,6 +61,7 @@ class BlogListSerializer(serializers.ModelSerializer):
 
     categories = serializers.SlugRelatedField(slug_field="slug", many=True, read_only=True)
     departments = serializers.SlugRelatedField(slug_field="slug", many=True, read_only=True)
+    courses = serializers.SlugRelatedField(slug_field="slug", many=True, read_only=True)
     featured_image_url = serializers.SerializerMethodField()
     reading_time_minutes = serializers.IntegerField(read_only=True)
 
@@ -67,7 +69,7 @@ class BlogListSerializer(serializers.ModelSerializer):
         model = Blog
         fields = [
             "id", "unique_id", "title", "slug", "summary",
-            "categories", "departments", "author_name", "published_date",
+            "categories", "departments", "courses", "author_name", "published_date",
             "featured_image_url", "reading_time_minutes",
             "is_published", "is_featured", "display_order",
             "created_at", "updated_at",
@@ -90,8 +92,12 @@ class BlogSerializer(SEOModelSerializerMixin, serializers.ModelSerializer):
     departments = WritableSlugRelatedField(
         slug_field="slug", many=True, queryset=Department.objects.all(), required=False,
     )
+    courses = WritableSlugRelatedField(
+        slug_field="slug", many=True, queryset=Course.objects.all(), required=False,
+    )
     categories_detail = BlogCategorySerializer(source="categories", many=True, read_only=True)
     departments_detail = DepartmentBriefSerializer(source="departments", many=True, read_only=True)
+    courses_detail = CourseBriefSerializer(source="courses", many=True, read_only=True)
     images = BlogImageBriefSerializer(many=True, read_only=True)
     featured_image_url = serializers.SerializerMethodField()
     reading_time_minutes = serializers.IntegerField(read_only=True)
@@ -101,6 +107,7 @@ class BlogSerializer(SEOModelSerializerMixin, serializers.ModelSerializer):
         fields = [
             "id", "unique_id", "title", "slug", "summary", "content",
             "categories", "categories_detail", "departments", "departments_detail",
+            "courses", "courses_detail",
             "featured_image", "featured_image_url", "featured_image_alt",
             "author_name", "published_date", "reading_time_minutes",
             "images",

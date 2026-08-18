@@ -5,7 +5,7 @@ from django.db import models
 from django.utils import timezone
 
 from apps.core.fields import SVGImageField
-from apps.core.models import ContentBase, Department, OrderedModel
+from apps.core.models import ContentBase, Course, Department, OrderedModel
 from apps.core.utils.dates import iso_date
 from apps.core.utils.text import strip_html, summarise
 
@@ -26,6 +26,10 @@ class Blog(ContentBase):
     departments = models.ManyToManyField(
         Department, related_name="blogs", blank=True,
         help_text="Departments this post belongs to. Leave empty for university-wide posts.",
+    )
+    courses = models.ManyToManyField(
+        Course, related_name="blogs", blank=True,
+        help_text="Programmes this post relates to. Powers the website's Courses filter.",
     )
     summary = models.TextField(
         blank=True, default="",
@@ -97,6 +101,7 @@ class Blog(ContentBase):
         if self.pk:
             sources.extend(category.name for category in self.categories.all())
             sources.extend(department.name for department in self.departments.all())
+            sources.extend(course.name for course in self.courses.all())
         return [source for source in sources if source]
 
     def seo_schema_type(self) -> str:

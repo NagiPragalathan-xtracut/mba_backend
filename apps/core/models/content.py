@@ -24,6 +24,9 @@ class ContentQuerySet(PublishedQuerySet):
     def by_department(self, department_slug: str):
         return self.filter(departments__slug=department_slug).distinct()
 
+    def by_course(self, course_slug: str):
+        return self.filter(courses__slug=course_slug).distinct()
+
 
 class ContentBase(SEOMixin, TimeStampedModel):
     """Publishable, sluggable, SEO-aware content."""

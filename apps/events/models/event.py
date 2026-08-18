@@ -4,8 +4,8 @@ from ckeditor_uploader.fields import RichTextUploadingField
 from django.db import models, transaction
 
 from apps.core.fields import SVGImageField
-from apps.core.models import ContentBase, Department, OrderedModel
-from apps.core.utils.dates import iso_date
+from apps.core.models import ContentBase, Course, Department, OrderedModel
+from apps.core.utils.dates import format_clock_time, iso_date
 from apps.core.utils.text import summarise
 
 from .category import EventCategory
@@ -34,6 +34,10 @@ class Event(ContentBase):
         blank=True,
         help_text="Departments this event belongs to. Leave empty for university-wide events.",
     )
+    courses = models.ManyToManyField(
+        Course, related_name="events", blank=True,
+        help_text="Programmes this event relates to. Powers the website's Courses filter.",
+    )
     summary = models.TextField(
         blank=True, default="",
         help_text="Short teaser shown on listing cards. Generated from the content when blank.",
@@ -42,6 +46,8 @@ class Event(ContentBase):
 
     event_date = models.DateField(null=True, blank=True, help_text="When the event takes place / took place.")
     end_date = models.DateField(null=True, blank=True, help_text="Last day, for multi-day events.")
+    start_time = models.TimeField(null=True, blank=True, help_text="Start time shown as the event's 'Timing'. Optional.")
+    end_time = models.TimeField(null=True, blank=True, help_text="Finish time. Optional; shown only when a start time is set.")
     venue = models.CharField(max_length=255, blank=True, default="")
 
     class Meta:
@@ -55,6 +61,29 @@ class Event(ContentBase):
 
     def __str__(self) -> str:
         return self.title
+
+    # ------------------------------------------------------------------
+    # Presentation helpers
+    # ------------------------------------------------------------------
+
+    #: Separator between start and end time. An en dash, matching the website's
+    #: typography - not a hyphen.
+    TIME_RANGE_SEPARATOR = "–"
+
+    @property
+    def timing_label(self) -> str:
+        """
+        Human-readable time range, e.g. ``"10:00 AM - 11:00 AM"``.
+
+        Empty when no start time is set, which is the normal case for news and
+        announcements - the website hides the "Timing" line entirely then.
+        """
+        if not self.start_time:
+            return ""
+        start = format_clock_time(self.start_time)
+        if not self.end_time:
+            return start
+        return f"{start} {self.TIME_RANGE_SEPARATOR} {format_clock_time(self.end_time)}"
 
     # ------------------------------------------------------------------
     # Featured image
@@ -107,6 +136,7 @@ class Event(ContentBase):
             # M2M rows only exist once the instance has a primary key.
             sources.append(self.category.name if self.category_id else "")
             sources.extend(department.name for department in self.departments.all())
+            sources.extend(course.name for course in self.courses.all())
         return [source for source in sources if source]
 
     def seo_schema_type(self) -> str:

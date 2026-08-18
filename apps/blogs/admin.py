@@ -60,10 +60,10 @@ class BlogAdmin(ContentAdminMixin, PublishActionsMixin, ModelAdmin):
     list_display = ["thumbnail", "title", "category_list", "author_name", "published_date", "display_order", "status_badge"]
     list_display_links = ["thumbnail", "title"]
     list_editable = ["display_order"]
-    list_filter = ["categories", "departments", "is_published", "is_featured", "published_date"]
+    list_filter = ["categories", "departments", "courses", "is_published", "is_featured", "published_date"]
     list_filter_submit = True
     search_fields = ["title", "summary", "content", "author_name"]
-    autocomplete_fields = ["categories", "departments"]
+    autocomplete_fields = ["categories", "departments", "courses"]
     prepopulated_fields = {"slug": ("title",)}
     readonly_fields = AUDIT_FIELDS
     date_hierarchy = "published_date"
@@ -78,7 +78,7 @@ class BlogAdmin(ContentAdminMixin, PublishActionsMixin, ModelAdmin):
             "Post",
             {
                 "classes": ["tab"],
-                "fields": ("title", "slug", "categories", "departments", "summary", "content"),
+                "fields": ("title", "slug", "categories", "departments", "courses", "summary", "content"),
             },
         ),
         (
@@ -101,7 +101,7 @@ class BlogAdmin(ContentAdminMixin, PublishActionsMixin, ModelAdmin):
     )
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("categories", "departments")
+        return super().get_queryset(request).prefetch_related("categories", "departments", "courses")
 
     @display(description="")
     def thumbnail(self, obj):

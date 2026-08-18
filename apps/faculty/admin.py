@@ -107,7 +107,11 @@ class FacultyAdmin(ContentAdminMixin, PublishActionsMixin, ModelAdmin):
             "Photo",
             {
                 "classes": ["tab"],
-                "fields": ("image", "image_alt"),
+                "description": (
+                    "Upload a file, or point at an existing photo on the university CDN. "
+                    "An uploaded file always wins when both are filled in."
+                ),
+                "fields": ("image", "external_image_url", "image_alt"),
             },
         ),
         (

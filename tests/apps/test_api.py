@@ -33,7 +33,7 @@ class APITestBase(APITestCase):
         # "Upcoming" is created by the events data migration, which the test
         # database also runs - reuse it instead of clashing with it.
         cls.event_category = EventCategory.objects.get(slug="upcoming")
-        cls.blog_category = BlogCategory.objects.create(name="Research")
+        cls.blog_category = BlogCategory.objects.get(slug="research")
         cls.designation = Designation.objects.create(name="Professor")
 
     def authenticate(self):
@@ -194,7 +194,7 @@ class BlogAPITests(APITestBase):
         self.authenticate()
 
     def test_a_post_can_be_created_with_several_categories(self):
-        BlogCategory.objects.create(name="Campus Life")
+        # Both slugs come from the blogs/0002_website_categories migration.
         response = self.client.post(
             "/api/v1/blogs/",
             {

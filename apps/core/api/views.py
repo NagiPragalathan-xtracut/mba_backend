@@ -7,9 +7,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from apps.core.api.serializers import DepartmentSerializer
+from apps.core.api.serializers import CourseSerializer, DepartmentSerializer
 from apps.core.api.viewsets import TaxonomyViewSet
-from apps.core.models import Department
+from apps.core.models import Course, Department
 
 
 class DepartmentViewSet(TaxonomyViewSet):
@@ -22,6 +22,19 @@ class DepartmentViewSet(TaxonomyViewSet):
 
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
+    filterset_fields = ["is_active"]
+    search_fields = ["name", "short_name", "description"]
+
+
+class CourseViewSet(TaxonomyViewSet):
+    """
+    Programmes offered by the school.
+
+    Shared by events and blogs, and the source of the website's Courses filter.
+    """
+
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
     filterset_fields = ["is_active"]
     search_fields = ["name", "short_name", "description"]
 

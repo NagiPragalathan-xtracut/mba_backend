@@ -72,6 +72,24 @@ Control it with `?page=2&page_size=50` (maximum 100).
 
 ## Endpoints
 
+### The common feed
+
+Events and blog posts live in separate tables but the website shows them on one
+page, so these three routes serve both through a single, UI-ready shape. Every
+value is pre-formatted server-side — dates are already `"18 Dec"`, bodies are
+already split into paragraphs — so a frontend renders them without transforming
+anything.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/news-events/` | Merged, filterable, paginated feed of events + blogs |
+| `GET` | `/news-events/{slug}/` | One entry, from whichever table holds it |
+| `GET` | `/news-events/categories/` | Category filter options, de-duplicated across both |
+| `GET` | `/news-events/courses/` | Course filter options, counted across both |
+
+Read-only and public. Writes go through `/events/` and `/blogs/`, which is where
+validation and permissions live.
+
 ### Content
 
 | Method | Path | Purpose |
@@ -94,7 +112,8 @@ Control it with `?page=2&page_size=50` (maximum 100).
 
 `GET`/`POST` on the collection, `GET`/`PATCH`/`DELETE` on `{slug}`:
 
-`/departments/` · `/event-categories/` · `/blog-categories/` · `/designations/`
+`/departments/` · `/courses/` · `/event-categories/` · `/blog-categories/` ·
+`/designations/`
 
 ### Sub-resources
 
@@ -118,12 +137,29 @@ request was authenticated. Never cached; safe to poll.
 
 Shared by every list endpoint: `?search=`, `?ordering=`, `?page=`, `?page_size=`.
 
+### The common feed
+
+| Parameter | Example | Notes |
+| --- | --- | --- |
+| `type` | `?type=event` | `event` or `blog`; omit for both. Anything else is a 400. |
+| `category` | `?category=announcements` | Slug. `all` is treated as no filter. |
+| `course` | `?course=mba-finance` | Slug. `all` is treated as no filter. |
+| `department` | `?department=school-of-management` | Slug. |
+| `search` | `?search=conclave` | Case-insensitive title match. |
+| `featured` | `?featured=true` | Entries flagged as featured. |
+| `date_from` / `date_to` | `?date_from=2024-12-01` | Applies to `event_date` and `published_date`. |
+
+Filters that only one model can express are skipped for the other rather than
+erroring, so `?category=leadership` narrows the posts and simply matches no
+events.
+
 ### Events
 
 | Parameter | Example |
 | --- | --- |
 | `category` | `?category=achievements` |
 | `department` | `?department=computer-science-engineering` |
+| `course` | `?course=mba-finance` |
 | `is_featured` / `is_published` | `?is_featured=true` |
 | `date_from` / `date_to` | `?date_from=2026-01-01&date_to=2026-12-31` |
 | `year` | `?year=2026` |
@@ -131,7 +167,7 @@ Shared by every list endpoint: `?search=`, `?ordering=`, `?page=`, `?page_size=`
 
 ### Blogs
 
-`category`, `department`, `author`, `is_featured`, `is_published`,
+`category`, `department`, `course`, `author`, `is_featured`, `is_published`,
 `date_from`, `date_to`, `year`, `ordering` (`display_order`,
 `published_date`, `created_at`, `title`).
 
@@ -169,6 +205,47 @@ Shared by every list endpoint: `?search=`, `?ordering=`, `?page=`, `?page_size=`
 
 The detail response adds `content`, `category_detail`, `departments_detail`,
 `images[]`, every SEO field, and a nested `seo` object.
+
+### Feed entry
+
+The same shape whether the row is an event or a blog post. `type` is the
+discriminator; the fields a given kind cannot fill come back empty rather than
+absent, so a client never has to branch.
+
+```json
+{
+  "id": 1,
+  "type": "event",
+  "slug": "srm-drug-awareness-programme",
+  "title": "Drug Awareness Programme",
+  "excerpt": "The Department of Biotechnology, with the NSS, held a session …",
+  "image": "http://127.0.0.1:8000/media/events/gallery/poster.jpg",
+  "category": "Events",
+  "category_slug": "events",
+  "date": "18 Dec",
+  "date_long": "18 Dec 2024",
+  "date_label": "18.12.2024",
+  "date_iso": "2024-12-18",
+  "timing": "10:00 AM – 11:00 AM",
+  "venue": "Seminar Hall",
+  "author": "Mohan Babu University",
+  "reading_time_minutes": 0,
+  "paragraphs": ["The Department of Biotechnology …", "Expert speakers …"],
+  "content_html": "<p>The Department of Biotechnology …</p>",
+  "gallery": [{ "image": "…", "alt": "…", "caption": "" }],
+  "departments": ["School of Management"],
+  "courses": ["MBA"],
+  "course_slugs": ["mba"],
+  "href": "/news-events/srm-drug-awareness-programme",
+  "is_featured": false,
+  "display_order": 10,
+  "seo": { "…": "see below" }
+}
+```
+
+`timing` is empty for anything without a start time — news and announcements —
+and `reading_time_minutes` is `0` for events. Blog entries carry a
+`reading_time_minutes` and an empty `timing` / `venue` instead.
 
 ### The nested `seo` object
 

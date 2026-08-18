@@ -48,3 +48,28 @@ def summarise(value: str | None, limit: int = 160) -> str:
     if " " in clipped:
         clipped = clipped.rsplit(" ", 1)[0]
     return f"{clipped.rstrip(',.;:- ')}…"
+
+
+# Block-level tags that end a paragraph. CKEditor emits <p> for normal text but
+# lists, headings and table cells also read as separate paragraphs on a page
+# that renders plain text rather than HTML.
+_BLOCK_SPLIT_RE = re.compile(
+    r"</\s*(?:p|div|li|h[1-6]|blockquote|tr|section|article)\s*>|<\s*br\s*/?\s*>",
+    re.IGNORECASE,
+)
+
+
+def html_paragraphs(value: str | None) -> list[str]:
+    """
+    Split rich-text HTML into a list of plain-text paragraphs.
+
+    The website renders article bodies as a sequence of ``<p>`` elements it
+    styles itself, so it needs the text broken into blocks rather than raw
+    CKEditor markup. Empty blocks are dropped, so stray ``<p>&nbsp;</p>``
+    spacers an editor left behind never become blank paragraphs on the page.
+    """
+    if not value:
+        return []
+
+    blocks = _BLOCK_SPLIT_RE.split(str(value))
+    return [text for text in (strip_html(block) for block in blocks) if text]

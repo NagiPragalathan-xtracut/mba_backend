@@ -29,10 +29,10 @@ example prompts.
 | --- | --- |
 | [Architecture](architecture.md) | Project layout, the SEO engine, request flow, design decisions |
 | [Data model](data-model.md) | Every model, field and relationship |
-| [API reference](api.md) | REST endpoints, authentication, filtering, pagination |
+| [API reference](api.md) | REST endpoints, the common feed, authentication, filtering, pagination |
 | [Admin guide](admin-guide.md) | Day-to-day content editing |
 | [MCP integration](mcp.md) | Claude setup, all 33 tools, worked examples |
-| [Deployment](deployment.md) | Production settings, checklist, web server setup |
+| [Deployment](deployment.md) | Production settings, S3 media storage, checklist, web server setup |
 
 ## Conventions used throughout
 
@@ -43,6 +43,9 @@ example prompts.
   numeric id or a UUID.
 - **Reads are public, writes need a token.** Anonymous callers also never see
   unpublished content.
+- **Events and blogs publish together.** They are separate tables, but
+  `/api/v1/news-events/` serves both in one normalised, UI-ready shape so a
+  frontend renders them with one set of components.
 - **SEO is generated, not typed.** Leave the SEO fields blank and they fill
   themselves; fill one in and it is never overwritten.
 

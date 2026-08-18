@@ -35,6 +35,13 @@ class Faculty(ContentBase):
         upload_to="faculty/photos/", blank=True, null=True,
         help_text="Profile photo. Portrait orientation works best.",
     )
+    external_image_url = models.URLField(
+        max_length=500, blank=True, default="",
+        help_text=(
+            "Optional CDN address of the photo, used when no file is uploaded above. "
+            "Lets existing photos stay on the university CDN instead of being re-uploaded."
+        ),
+    )
     image_alt = models.CharField(max_length=255, blank=True, default="", help_text="Alt text for the photo.")
 
     designation = models.ForeignKey(
@@ -71,7 +78,10 @@ class Faculty(ContentBase):
 
     @property
     def image_url(self) -> str:
-        return self.image.url if self.image else ""
+        """The photo to display: an uploaded file wins over the CDN address."""
+        if self.image:
+            return self.image.url
+        return self.external_image_url
 
     @property
     def department_names(self) -> list[str]:

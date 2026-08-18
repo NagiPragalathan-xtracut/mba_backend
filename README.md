@@ -14,6 +14,11 @@ Every piece of content gets complete SEO metadata (meta tags, Open Graph,
 Twitter cards, schema.org JSON-LD) generated automatically, and every editor
 override is preserved.
 
+Events and blogs are stored separately but published together through one
+**common feed** at `/api/v1/news-events/`, in a single UI-ready shape. That is
+what lets a website render news, events and blog posts with one set of
+components — see [docs/api.md](docs/api.md#the-common-feed).
+
 ---
 
 ## Quick start
@@ -45,6 +50,7 @@ Then open:
 - <http://127.0.0.1:8000/admin/> — the editor dashboard
 - <http://127.0.0.1:8000/api/docs/> — interactive API documentation
 - <http://127.0.0.1:8000/api/v1/events/> — the API itself
+- <http://127.0.0.1:8000/api/v1/news-events/> — the common news + events + blogs feed
 
 ## Connecting Claude
 
@@ -62,7 +68,8 @@ creating and updating content. Full walkthrough: **[docs/mcp.md](docs/mcp.md)**.
 ```
 mbu_backend/
 ├── apps/
-│   ├── core/          Shared bases, SEO engine, departments, dashboard
+│   ├── core/          Shared bases, SEO engine, departments, courses,
+│   │                  the common news/events/blogs feed, dashboard
 │   ├── events/        Events and achievements
 │   ├── blogs/         Articles
 │   └── faculty/       Staff profiles
@@ -71,7 +78,7 @@ mbu_backend/
 ├── docs/              Documentation
 ├── tests/             Test suite (mirrors the source layout)
 ├── templates/         Admin template overrides
-└── media/             Uploaded files
+└── media/             Uploaded files (or an S3 bucket when USE_S3=True)
 ```
 
 Each app follows the same shape: `models/`, `admin.py`, `api/` (serializers,
@@ -81,11 +88,13 @@ filters, views, urls) and `migrations/`.
 
 ```bash
 python manage.py runserver                 # Development server
-python manage.py test tests                # Run the test suite (95 tests)
+python manage.py test tests                # Run the test suite (140 tests)
 python manage.py makemigrations            # After changing a model
 python manage.py migrate                   # Apply migrations
-python manage.py seed_content              # Load sample content
+python manage.py seed_content              # Load generic sample content
 python manage.py seed_content --flush      # Reload it from scratch
+python manage.py seed_srmmba               # Load the SRM B-School website content
+python manage.py seed_srmmba --flush       # Reload it from scratch
 python manage.py create_api_token --username mcp-bot --create-user
 python manage.py collectstatic             # Before deploying
 python -m mcp_server                       # Run the MCP server manually

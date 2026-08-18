@@ -28,14 +28,21 @@ create them **once** and reuse them.
 1. **Departments** — every academic department. Fill in the full name and a
    short form (`CSE`), and use *Display order* to control the order on the
    website.
-2. **Event categories** — *Upcoming* and *Achievements* already exist. Add more
-   only if the site genuinely needs another grouping.
-3. **Blog categories** — topics such as Research, Campus Life, Placements.
-4. **Designations** — job titles. *Display order* is handy for seniority
+2. **Event categories** — News, Events, Announcements, Press Release and
+   Campus Life already exist; these are what the website's sidebar filter
+   offers. Add more only if the site genuinely needs another grouping, and
+   untick *Is active* to remove one from the filter without deleting it.
+3. **Blog categories** — topics such as Leadership, Career, Industry, Campus
+   Life, Research and Finance.
+4. **Courses** — the programmes the website's Courses filter lists (MBA,
+   Executive MBA, and the specialisations). Shared by events and blogs, so
+   tagging a post with *MBA (Finance)* makes it appear under that filter
+   alongside events tagged the same way.
+5. **Designations** — job titles. *Display order* is handy for seniority
    (Head of Department above Professor, and so on).
 
-The department list shows how much content uses each entry, so you can see at a
-glance whether one is safe to retire.
+The department and course lists show how much content uses each entry, so you
+can see at a glance whether one is safe to retire.
 
 ## Adding an event
 
@@ -46,15 +53,24 @@ glance whether one is safe to retire.
 - *Slug* — the web address. Fills itself in as you type the title; only change
   it if you have a reason, and never after the page is live (existing links
   would break).
-- *Category* — Upcoming or Achievements.
+- *Category* — News, Events, Announcements, Press Release or Campus Life. This
+  is the label shown on the card and what the website's sidebar filters by.
 - *Departments* — pick one or more, or leave empty for university-wide events.
+- *Courses* — the programmes this relates to. Drives the website's Courses
+  filter; leave empty if it applies to no particular programme.
 - *Summary* — the teaser on listing cards. Leave it blank and the first part of
   the description is used.
 - *Content* — the full description, in the rich-text editor. You can paste from
   Word, add headings, lists, links, tables and images.
 
-**Schedule & Venue tab** — dates and location. For a single-day event fill only
-*Event date*. The form refuses an end date earlier than the start date.
+**Schedule & Venue tab** — dates, times and location. For a single-day event
+fill only *Event date*. The form refuses an end date earlier than the start
+date.
+
+> **Times are optional.** Fill in *Start time* (and optionally *End time*) and
+> the website shows a "Timing" line reading `10:00 AM – 11:00 AM`. Leave them
+> blank — as you would for news, a ranking or an admissions announcement — and
+> the line is hidden entirely.
 
 **Publishing tab**
 - *Is published* — untick to hide the event from the website while you work.
@@ -94,7 +110,9 @@ article length.
 
 - **Profile tab** — name, slug, designation, departments (a person can belong
   to more than one) and qualifications.
-- **Photo tab** — the portrait. Portrait orientation works best.
+- **Photo tab** — the portrait. Portrait orientation works best. Either upload
+  a file, or paste an existing address into *External image URL* to keep the
+  photo on the university CDN. An uploaded file wins when both are filled in.
 - **Contact tab** — email, phone and an external profile link. All optional;
   anything you fill in is shown publicly.
 - **Publishing tab** — same controls as events.

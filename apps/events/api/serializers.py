@@ -3,12 +3,13 @@
 from rest_framework import serializers
 
 from apps.core.api.serializers import (
+    CourseBriefSerializer,
     DepartmentBriefSerializer,
     SEOModelSerializerMixin,
     TaxonomySerializer,
     WritableSlugRelatedField,
 )
-from apps.core.models import Department
+from apps.core.models import Course, Department
 from apps.events.models import Event, EventCategory, EventImage
 
 
@@ -66,13 +67,14 @@ class EventListSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(slug_field="slug", read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
     departments = serializers.SlugRelatedField(slug_field="slug", many=True, read_only=True)
+    courses = serializers.SlugRelatedField(slug_field="slug", many=True, read_only=True)
     featured_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = [
             "id", "unique_id", "title", "slug", "summary",
-            "category", "category_name", "departments",
+            "category", "category_name", "departments", "courses",
             "event_date", "end_date", "venue",
             "featured_image_url", "is_published", "is_featured", "display_order",
             "created_at", "updated_at",
@@ -93,8 +95,12 @@ class EventSerializer(SEOModelSerializerMixin, serializers.ModelSerializer):
     departments = WritableSlugRelatedField(
         slug_field="slug", many=True, queryset=Department.objects.all(), required=False,
     )
+    courses = WritableSlugRelatedField(
+        slug_field="slug", many=True, queryset=Course.objects.all(), required=False,
+    )
     category_detail = EventCategorySerializer(source="category", read_only=True)
     departments_detail = DepartmentBriefSerializer(source="departments", many=True, read_only=True)
+    courses_detail = CourseBriefSerializer(source="courses", many=True, read_only=True)
     images = EventImageBriefSerializer(many=True, read_only=True)
     featured_image_url = serializers.SerializerMethodField()
 
@@ -103,6 +109,7 @@ class EventSerializer(SEOModelSerializerMixin, serializers.ModelSerializer):
         fields = [
             "id", "unique_id", "title", "slug", "summary", "content",
             "category", "category_detail", "departments", "departments_detail",
+            "courses", "courses_detail",
             "event_date", "end_date", "venue",
             "images", "featured_image_url",
             "is_published", "is_featured", "display_order",

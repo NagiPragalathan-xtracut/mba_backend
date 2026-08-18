@@ -34,7 +34,7 @@ class BlogCategoryViewSet(TaxonomyViewSet):
 class BlogViewSet(BaseContentViewSet):
     """Blog posts."""
 
-    queryset = Blog.objects.prefetch_related("categories", "departments", "images").all()
+    queryset = Blog.objects.prefetch_related("categories", "departments", "courses", "images").all()
     serializer_class = BlogSerializer
     list_serializer_class = BlogListSerializer
     filterset_class = BlogFilter

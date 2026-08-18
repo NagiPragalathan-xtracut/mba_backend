@@ -12,8 +12,10 @@ ALLOWED_HOSTS = ["*"]
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Serve static files straight from disk; no manifest hashing while iterating.
+# The media ("default") backend is left exactly as `base` resolved it, so a
+# developer can flip USE_S3=True and exercise the real bucket locally.
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    **globals()["STORAGES"],
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
 

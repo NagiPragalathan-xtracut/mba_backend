@@ -9,6 +9,9 @@ Department ──┬──< Event >──── EventCategory
              ├──< Blog  >──── BlogCategory (many-to-many)
              └──< Faculty >── Designation
 
+Course ──────┬──< Event      (many-to-many)
+             └──< Blog       (many-to-many)
+
 Event    ──< EventImage      (one is_featured per event)
 Blog     ──< BlogImage       (cover lives on Blog itself)
 Faculty  ──< FacultySection  (repeatable heading + rich text)
@@ -57,17 +60,40 @@ everywhere and the website can filter any content by the same slug.
 
 `department.label` returns the short name when set, otherwise the full name.
 
+### Course
+
+The programme a piece of content relates to — MBA, Executive MBA, MBA (Finance)
+and so on. Shared by events and blogs, which is what lets the website's Courses
+filter narrow both at once. The six the site launches with are created by
+`apps/core/migrations/0003_default_courses.py`.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `short_name` | char(32) | Abbreviation for compact UI, e.g. `EMBA`. |
+
+`course.label` returns the short name when set, otherwise the full name.
+Deactivating a course removes it from the website's filter without touching the
+content tagged to it.
+
 ### EventCategory
 
 How an event is classified. The project ships with **Upcoming** and
 **Achievements**, created by a data migration
 (`apps/events/migrations/0002_default_categories.py`) so the first event can be
-created immediately. More can be added at any time.
+created immediately. A second migration
+(`0004_website_categories.py`) adds the five the public site filters by — News,
+Events, Announcements, Press Release and Campus Life. More can be added at any
+time, and any category can be hidden from the website by unticking **Is
+active**.
 
 ### BlogCategory
 
-Topic buckets for articles — Research, Campus Life, Placements. Separate from
-event categories on purpose: the two lists are free to diverge.
+Topic buckets for articles — Leadership, Career, Industry, Campus Life,
+Research, Finance — seeded by
+`apps/blogs/migrations/0002_website_categories.py`. Separate from event
+categories on purpose: the two lists are free to diverge. Where a name appears
+in both (Campus Life), the feed's categories endpoint merges them into one
+sidebar entry.
 
 ### Designation
 
@@ -83,11 +109,19 @@ Faculty job titles. `display_order` is useful for seniority ordering.
 | `slug` | slug | auto | From the title. |
 | `category` | FK → EventCategory | ✅ | `PROTECT` — a category in use cannot be deleted. |
 | `departments` | M2M → Department | | Empty means university-wide. |
+| `courses` | M2M → Course | | Programmes this event relates to. |
 | `summary` | text | | Listing teaser. Derived from `content` when blank. |
 | `content` | rich text | ✅ | CKEditor body with image upload. |
 | `event_date` | date | | Start date. |
 | `end_date` | date | | For multi-day events. Must not precede `event_date`. |
+| `start_time` | time | | Optional. Drives the website's "Timing" line. |
+| `end_time` | time | | Optional. Only shown when `start_time` is also set. |
 | `venue` | char(255) | | |
+
+**Timing.** `event.timing_label` renders the two times as
+`"10:00 AM – 11:00 AM"`, or just the start when there is no end, or an empty
+string when there is no start — which is the normal case for news and
+announcements, and what makes the website hide the line entirely.
 
 **Featured image.** Not a column: it is whichever `EventImage` carries
 `is_featured`. `event.featured_image` returns that row (falling back to the
@@ -123,6 +157,7 @@ Behaviour on save:
 | `slug` | slug | auto | |
 | `categories` | M2M → BlogCategory | | |
 | `departments` | M2M → Department | | Empty means university-wide. |
+| `courses` | M2M → Course | | Programmes this post relates to. |
 | `summary` | text | | Derived from `content` when blank. |
 | `content` | rich text | ✅ | |
 | `featured_image` | SVGImageField | | Cover image, uploaded directly. |
@@ -150,6 +185,7 @@ fallback behaviour as `EventImage`, but no featured flag — that is what
 | `name` | char(255) | ✅ | The slug is generated from this, not a `title`. |
 | `slug` | slug | auto | |
 | `image` | SVGImageField | | Profile photo, `media/faculty/photos/`. |
+| `external_image_url` | URL(500) | | CDN address, used when no file is uploaded. |
 | `image_alt` | char(255) | | Defaults to the name. |
 | `designation` | FK → Designation | ✅ | `PROTECT`. |
 | `departments` | M2M → Department | | A person may belong to several. |
@@ -157,6 +193,10 @@ fallback behaviour as `EventImage`, but no featured flag — that is what
 | `mail_id` | email | | Optional, shown publicly when filled. |
 | `phone_number` | char(20) | | Optional. Validated against `[0-9+()\- ]{6,20}`. |
 | `profile_link` | URL | | Personal site, Google Scholar, ORCID. |
+
+`faculty.image_url` returns the uploaded file's URL when there is one and the
+`external_image_url` otherwise, so existing photos can stay on the university
+CDN instead of being re-uploaded.
 
 **Ordering:** `display_order`, then `name`.
 

@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from apps.core.models import Department
+from apps.core.models import Course, Department
 
 
 class SEOSerializer(serializers.Serializer):
@@ -68,6 +68,20 @@ class DepartmentSerializer(TaxonomySerializer):
     class Meta(TaxonomySerializer.Meta):
         model = Department
         fields = TaxonomySerializer.Meta.fields + ["short_name"]
+
+
+class CourseSerializer(TaxonomySerializer):
+    class Meta(TaxonomySerializer.Meta):
+        model = Course
+        fields = TaxonomySerializer.Meta.fields + ["short_name"]
+
+
+class CourseBriefSerializer(serializers.ModelSerializer):
+    """Compact course representation for nesting inside content payloads."""
+
+    class Meta:
+        model = Course
+        fields = ["id", "name", "slug", "short_name"]
 
 
 class DepartmentBriefSerializer(serializers.ModelSerializer):

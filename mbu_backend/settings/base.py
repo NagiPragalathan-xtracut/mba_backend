@@ -11,6 +11,8 @@ from pathlib import Path
 import environ
 from django.urls import reverse_lazy
 
+from .storage import build_media_storage
+
 # ---------------------------------------------------------------------------
 # Paths & environment
 # ---------------------------------------------------------------------------
@@ -131,6 +133,40 @@ DATABASES = {
     )
 }
 
+# MySQL needs three things a connection URL cannot express:
+#
+# * **utf8mb4** - MySQL's "utf8" is a three-byte subset that cannot store emoji
+#   or many CJK characters, so editors pasting them into CKEditor would hit a
+#   database error rather than a validation one.
+# * **TLS** - the managed database requires an encrypted connection.
+# * **STRICT_TRANS_TABLES** - without it MySQL silently truncates over-long
+#   values instead of raising, which would quietly corrupt content.
+if DATABASES["default"]["ENGINE"].endswith("mysql"):
+    options = DATABASES["default"].setdefault("OPTIONS", {})
+    options.setdefault("charset", "utf8mb4")
+    options.setdefault("init_command", "SET sql_mode='STRICT_TRANS_TABLES'")
+
+    # `ssl_mode`, NOT an `ssl` dict. mysqlclient ignores an empty `ssl={}`, and
+    # an unencrypted connection makes MySQL 8 reject `caching_sha2_password`
+    # logins - which it reports as "Access denied", not as a TLS failure. That
+    # misdiagnosis costs an hour, so the mode is set explicitly.
+    #
+    # REQUIRED encrypts without verifying the server certificate, which is what
+    # a managed host with a self-signed certificate needs. Point
+    # DATABASE_SSL_CA at a CA bundle and raise the mode to VERIFY_CA (or
+    # VERIFY_IDENTITY) to authenticate the server as well.
+    ssl_mode = env.str("DATABASE_SSL_MODE", default="REQUIRED").upper()
+    if ssl_mode != "DISABLED":
+        options.setdefault("ssl_mode", ssl_mode)
+        ssl_ca = env.str("DATABASE_SSL_CA", default="")
+        if ssl_ca:
+            options.setdefault("ssl", {"ca": ssl_ca})
+
+    # Reuse connections between requests; MySQL handshakes are expensive over a
+    # network link. `CONN_HEALTH_CHECKS` discards ones the server has dropped.
+    DATABASES["default"].setdefault("CONN_MAX_AGE", env.int("DATABASE_CONN_MAX_AGE", default=60))
+    DATABASES["default"].setdefault("CONN_HEALTH_CHECKS", True)
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---------------------------------------------------------------------------
@@ -169,13 +205,9 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / env.str("STATIC_ROOT")
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / env.str("MEDIA_ROOT")
-
-STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
-}
+# Uploaded media goes either to the local disk or to S3 depending on `USE_S3`.
+# `storage.py` owns that decision and returns MEDIA_URL / MEDIA_ROOT / STORAGES.
+globals().update(build_media_storage(env, BASE_DIR))
 
 # Upload guard rails - a single image should never exceed this.
 MAX_UPLOAD_SIZE_MB = 10
@@ -387,6 +419,12 @@ UNFOLD = {
                         "title": "Departments",
                         "icon": "account_tree",
                         "link": reverse_lazy("admin:core_department_changelist"),
+                        "permission": _navigation_visible,
+                    },
+                    {
+                        "title": "Courses",
+                        "icon": "school",
+                        "link": reverse_lazy("admin:core_course_changelist"),
                         "permission": _navigation_visible,
                     },
                     {

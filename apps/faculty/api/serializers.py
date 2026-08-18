@@ -86,7 +86,7 @@ class FacultyListSerializer(serializers.ModelSerializer):
             "id", "unique_id", "name", "slug",
             "designation", "designation_name", "departments",
             "qualification", "mail_id", "phone_number",
-            "image_url", "image_alt",
+            "image_url", "image_alt", "external_image_url",
             "is_published", "is_featured", "display_order",
             "created_at", "updated_at",
         ]
@@ -118,7 +118,7 @@ class FacultySerializer(SEOModelSerializerMixin, serializers.ModelSerializer):
             "id", "unique_id", "name", "slug",
             "designation", "designation_detail", "departments", "departments_detail",
             "qualification", "mail_id", "phone_number", "profile_link",
-            "image", "image_url", "image_alt",
+            "image", "image_url", "image_alt", "external_image_url",
             "sections", "banners",
             "is_published", "is_featured", "display_order",
             "created_at", "updated_at",

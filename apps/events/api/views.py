@@ -36,7 +36,7 @@ class EventViewSet(BaseContentViewSet):
 
     queryset = (
         Event.objects.select_related("category")
-        .prefetch_related("departments", "images")
+        .prefetch_related("departments", "courses", "images")
         .all()
     )
     serializer_class = EventSerializer

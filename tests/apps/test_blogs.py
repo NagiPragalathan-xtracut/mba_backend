@@ -10,8 +10,9 @@ from apps.core.models import Department
 class BlogModelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.research = BlogCategory.objects.create(name="Research")
-        cls.campus = BlogCategory.objects.create(name="Campus Life")
+        # Seeded by the blogs/0002_website_categories data migration.
+        cls.research = BlogCategory.objects.get(slug="research")
+        cls.campus = BlogCategory.objects.get(slug="campus-life")
         cls.department = Department.objects.create(name="Computer Science", short_name="CSE")
 
     def make_blog(self, title="Life in the Robotics Lab", **overrides):

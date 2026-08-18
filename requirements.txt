@@ -20,8 +20,16 @@ django-filter==25.2
 django-cors-headers==4.9.0
 drf-spectacular==0.29.0
 
+# Database drivers
+# SQLite needs nothing; mysqlclient is Django's supported MySQL driver.
+mysqlclient==2.2.8
+
 # Media handling
 pillow==12.0.0
+
+# Media storage on S3 (enabled with USE_S3=True; boto3 is the AWS client)
+django-storages==1.14.6
+boto3==1.40.47
 
 # MCP server (Claude integration)
 mcp==1.27.0

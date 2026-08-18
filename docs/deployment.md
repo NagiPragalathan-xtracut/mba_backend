@@ -1,5 +1,60 @@
 # Deployment
 
+## Database
+
+The project reads `DATABASE_URL` and falls back to local SQLite when it is
+unset, so a fresh clone runs with no configuration. Set it to point at a real
+server:
+
+```
+# MySQL
+DATABASE_URL=mysql://user:password@host:3306/dbname
+
+# Postgres
+DATABASE_URL=postgres://user:password@host:5432/dbname
+```
+
+URL-encode any `@ : / ? #` in the password, or the URL parses wrongly.
+
+### MySQL specifics
+
+`mysqlclient` is the driver (in `requirements.txt`). Three settings are applied
+automatically in `settings/base.py` when the engine is MySQL:
+
+| Setting | Why |
+| --- | --- |
+| `charset=utf8mb4` | MySQL's "utf8" is a 3-byte subset that cannot store emoji or much CJK text. |
+| `sql_mode=STRICT_TRANS_TABLES` | Without it MySQL silently truncates over-long values instead of raising. |
+| `ssl_mode` (default `REQUIRED`) | The connection is encrypted. |
+
+> **A trap worth knowing.** Use `ssl_mode`, never an empty `OPTIONS["ssl"] = {}`
+> — mysqlclient ignores the empty dict, and an unencrypted connection makes
+> MySQL 8 reject `caching_sha2_password` logins. It reports that as
+> **"Access denied for user ..."**, which reads like wrong credentials rather
+> than a TLS problem.
+
+`REQUIRED` encrypts without verifying the server certificate, which suits a
+managed host presenting a self-signed one. To authenticate the server as well,
+set `DATABASE_SSL_CA` to a CA bundle and raise `DATABASE_SSL_MODE=VERIFY_CA`.
+`DISABLED` turns TLS off.
+
+Connections are reused between requests (`DATABASE_CONN_MAX_AGE`, default 60s)
+because a MySQL handshake over a network link is expensive;
+`CONN_HEALTH_CHECKS` discards ones the server has already dropped.
+
+### First deploy to an empty database
+
+```bash
+python manage.py migrate          # schema + the category/course taxonomy
+python manage.py createsuperuser  # the admin login
+python manage.py seed_srmmba      # optional: the SRM B-School content
+```
+
+Running the test suite creates and drops a `test_<dbname>` database, so the
+database user needs `CREATE` privileges — or point `DATABASE_URL` at SQLite
+when running tests.
+
+
 Running the backend in production.
 
 ## What changes
@@ -35,6 +90,13 @@ CORS_ALLOW_ALL_ORIGINS=False
 DJANGO_TIME_ZONE=Asia/Kolkata
 MEDIA_ROOT=/var/www/mbu/media
 STATIC_ROOT=/var/www/mbu/staticfiles
+
+# Uploads on S3 instead of the local disk - see "Media storage on S3" below.
+USE_S3=True
+AWS_STORAGE_BUCKET_NAME=<bucket>
+AWS_S3_REGION_NAME=ap-south-1
+AWS_ACCESS_KEY_ID=<key id>
+AWS_SECRET_ACCESS_KEY=<secret>
 ```
 
 Generate the secret key with:
@@ -65,6 +127,129 @@ GRANT ALL PRIVILEGES ON DATABASE mbu TO mbu;
 
 Nothing in the code is SQLite-specific — the partial unique constraint on
 featured event images works on PostgreSQL too.
+
+## Media storage on S3
+
+Uploaded images (event galleries, blog covers, faculty portraits, CKEditor
+uploads) default to the local disk under `MEDIA_ROOT`. That works, but it ties
+the content to one server's filesystem and puts image traffic through Django.
+Setting `USE_S3=True` moves every upload to an S3 bucket instead.
+
+The switch is resolved in `mbu_backend/settings/storage.py`; nothing in the
+models, serializers or admin changes, because they all go through Django's
+`FileField.url`.
+
+### 1. Create the bucket
+
+Region should match the application server (`ap-south-1` for an India
+deployment). Keep **ACLs disabled** (the default "Bucket owner enforced") and
+switch **Block all public access** off — the bucket policy below is what
+actually grants access, and it only grants reads under `media/`.
+
+### 2. Bucket policy
+
+Attach this under *Permissions → Bucket policy*, replacing the bucket name:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadMedia",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::YOUR-BUCKET/media/*"
+    }
+  ]
+}
+```
+
+Read-only, and scoped to the `media/` prefix. Nobody can upload, delete or list
+the bucket without credentials.
+
+### 3. IAM user for the application
+
+Create a programmatic-access-only user with exactly these permissions — never
+reuse an administrator key:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::YOUR-BUCKET"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::YOUR-BUCKET/*"
+    }
+  ]
+}
+```
+
+Then create an access key for it (*Security credentials → Create access key →
+Application running outside AWS*). The secret is displayed once.
+
+### 4. Configure the application
+
+```bash
+USE_S3=True
+AWS_STORAGE_BUCKET_NAME=your-bucket
+AWS_S3_REGION_NAME=ap-south-1
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+Two optional values:
+
+| Variable | Use |
+| --- | --- |
+| `AWS_S3_CUSTOM_DOMAIN` | CloudFront distribution or CNAME serving the bucket. Image URLs switch to it automatically. |
+| `AWS_S3_ENDPOINT_URL` | Only for S3-compatible providers — Cloudflare R2, DigitalOcean Spaces, MinIO. Leave empty for real AWS. |
+
+Install the dependencies (already pinned in `requirements.txt`):
+
+```bash
+pip install -r requirements.txt
+```
+
+### 5. Move the existing uploads
+
+Flipping the flag only redirects *new* uploads. Files already on disk must be
+copied up, or every existing image 404s:
+
+```bash
+python manage.py sync_media_to_s3 --dry-run   # preview
+python manage.py sync_media_to_s3             # upload
+```
+
+The command skips files already present in the bucket, so it is safe to re-run.
+Use `--overwrite` to force a re-upload.
+
+### 6. Verify
+
+```bash
+python manage.py shell -c "from django.core.files.storage import default_storage; print(default_storage.url('events/gallery/example.jpg'))"
+```
+
+The printed URL should be an `https://` address with no `?X-Amz-Signature=`
+query string, and opening an existing image in a browser should return it
+rather than an *Access Denied* XML error.
+
+### Notes
+
+- **Static files stay local.** WhiteNoise already serves them well from the
+  application container; only media moves to S3.
+- **Next.js frontends** must list the bucket (or CDN) host under
+  `images.remotePatterns` in `next.config.js`, otherwise `next/image` refuses
+  to load them.
+- **Backups get simpler.** With media on S3, the `media/` tarball in the backup
+  section below is replaced by S3 versioning or a scheduled
+  `aws s3 sync s3://your-bucket/media/ ./media-backup/`.
 
 ## Deploy steps
 
@@ -145,7 +330,8 @@ server {
 - [ ] TLS terminated, HTTP redirected
 - [ ] `python manage.py check --deploy` clean
 - [ ] `collectstatic` run
-- [ ] Media directory writable by the app user and backed up
+- [ ] Media directory writable by the app user and backed up — or
+      `USE_S3=True` with the bucket policy, IAM user and `sync_media_to_s3` done
 - [ ] `.env` is `chmod 600` and excluded from version control
 - [ ] API tokens issued per client, ready to rotate
 

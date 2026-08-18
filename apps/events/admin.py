@@ -62,13 +62,13 @@ class EventCategoryAdmin(ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(ContentAdminMixin, PublishActionsMixin, ModelAdmin):
-    list_display = ["thumbnail", "title", "category", "department_list", "event_date", "display_order", "status_badge"]
+    list_display = ["thumbnail", "title", "category", "department_list", "event_date", "timing", "display_order", "status_badge"]
     list_display_links = ["thumbnail", "title"]
     list_editable = ["display_order"]
-    list_filter = ["category", "departments", "is_published", "is_featured", "event_date"]
+    list_filter = ["category", "departments", "courses", "is_published", "is_featured", "event_date"]
     list_filter_submit = True
     search_fields = ["title", "summary", "content", "venue"]
-    autocomplete_fields = ["category", "departments"]
+    autocomplete_fields = ["category", "departments", "courses"]
     prepopulated_fields = {"slug": ("title",)}
     readonly_fields = AUDIT_FIELDS
     date_hierarchy = "event_date"
@@ -83,14 +83,18 @@ class EventAdmin(ContentAdminMixin, PublishActionsMixin, ModelAdmin):
             "Event",
             {
                 "classes": ["tab"],
-                "fields": ("title", "slug", "category", "departments", "summary", "content"),
+                "fields": ("title", "slug", "category", "departments", "courses", "summary", "content"),
             },
         ),
         (
             "Schedule & Venue",
             {
                 "classes": ["tab"],
-                "fields": ("event_date", "end_date", "venue"),
+                "description": (
+                    "Times are optional. Fill them in and the website shows a "
+                    "'Timing' line; leave them blank for news and announcements."
+                ),
+                "fields": ("event_date", "end_date", "start_time", "end_time", "venue"),
             },
         ),
         (
@@ -107,12 +111,16 @@ class EventAdmin(ContentAdminMixin, PublishActionsMixin, ModelAdmin):
 
     def get_queryset(self, request):
         # Avoids an N+1 when rendering the category / departments columns.
-        return super().get_queryset(request).select_related("category").prefetch_related("departments", "images")
+        return super().get_queryset(request).select_related("category").prefetch_related("departments", "courses", "images")
 
     @display(description="")
     def thumbnail(self, obj):
         image = obj.featured_image
         return image_preview_html(image.image if image else None, height=44)
+
+    @display(description="Timing")
+    def timing(self, obj):
+        return obj.timing_label or "—"
 
     @display(description="Departments")
     def department_list(self, obj):
