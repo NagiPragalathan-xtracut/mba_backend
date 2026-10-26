@@ -5,7 +5,7 @@ of content — **events**, **blogs** and **faculty profiles** — and exposes th
 three ways: 
 
 | Surface | For | Where |
-| --- | --- | --- |
+| --- | --- | --- | 
 | Admin dashboard | Editors | `/admin/` |
 | REST API | The public website | `/api/v1/` |
 | MCP server | Claude | `python -m mcp_server` |
