@@ -1,0 +1,297 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{#
+  "Connect an AI agent" - rendered by apps.core.admin.connect_agent.ConnectAgentView.
+
+  `result` is present only on the request right after a token was created or
+  picked from the list, so the prompt (which embeds the key) is shown once
+  and never sits in a URL.
+#}
+
+{% block extrastyle %}
+    {{ block.super }}
+    {% include "admin/includes/connect_agent_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="ca">
+
+    {# ------------------------------------------------------------------ #}
+    {# Hero                                                                #}
+    {# ------------------------------------------------------------------ #}
+    <header class="ca-hero">
+        <div class="ca-hero__icon"><span class="material-symbols-outlined">smart_toy</span></div>
+        <div>
+            <h1>{% trans "Connect an AI agent" %}</h1>
+            <p>
+                {% blocktrans trimmed %}
+                    Let Claude, or any agent that supports MCP, create and update events, blogs and
+                    faculty profiles on this site. Each agent gets its own token, so you can switch one
+                    off without affecting the others.
+                {% endblocktrans %}
+            </p>
+        </div>
+    </header>
+
+    <ol class="ca-steps" aria-label="{% trans 'Steps' %}">
+        <li class="{% if result %}is-done{% else %}is-active{% endif %}">
+            <span class="ca-steps__num">{% if result %}<span class="material-symbols-outlined" style="font-size:16px">check</span>{% else %}1{% endif %}</span>
+            {% trans "Create a token" %}
+        </li>
+        <li class="{% if result %}is-active{% endif %}">
+            <span class="ca-steps__num">2</span>
+            {% trans "Copy the setup prompt" %}
+        </li>
+        <li>
+            <span class="ca-steps__num">3</span>
+            {% trans "Paste it into your agent" %}
+        </li>
+    </ol>
+
+    {# ------------------------------------------------------------------ #}
+    {# Result: prompt + token (only right after creating / picking one)    #}
+    {# ------------------------------------------------------------------ #}
+    {% if result %}
+        <section class="ca-card ca-card--result" id="result">
+            <div>
+                <h2><span class="material-symbols-outlined">task_alt</span>{% blocktrans with name=result.username %}Ready for {{ name }}{% endblocktrans %}</h2>
+                <p class="ca-muted" style="margin-top:6px">
+                    {% blocktrans trimmed with url=api_base_url %}
+                        Paste the prompt into Claude Code, Claude Desktop, Cursor, Codex, VS Code or any agent
+                        that can run commands. It downloads the MCP server, connects it to {{ url }} and checks
+                        the token, then tells you what it did.
+                    {% endblocktrans %}
+                </p>
+            </div>
+
+            <div class="ca-block">
+                <div class="ca-block__head">
+                    <span class="ca-block__title">{% trans "Setup prompt" %}</span>
+                    <button type="button" class="ca-btn ca-btn--primary" data-copy="ca-prompt">
+                        <span class="material-symbols-outlined">content_copy</span><span data-label>{% trans "Copy prompt" %}</span>
+                    </button>
+                </div>
+                <pre class="ca-code ca-code--tall" id="ca-prompt">{{ result.prompt }}</pre>
+            </div>
+
+            <div class="ca-block">
+                <span class="ca-block__title">{% trans "Token" %}</span>
+                <div class="ca-secret">
+                    <code id="ca-token">{{ result.key }}</code>
+                    <button type="button" class="ca-btn ca-btn--ghost ca-btn--sm" data-copy="ca-token">
+                        <span class="material-symbols-outlined">content_copy</span><span data-label>{% trans "Copy" %}</span>
+                    </button>
+                </div>
+                <div class="ca-warn">
+                    <span class="material-symbols-outlined" style="font-size:18px">warning</span>
+                    <span>{% trans "Anyone with this token can change the website's content. Share it only with the agent, never in a public place or a git repository." %}</span>
+                </div>
+            </div>
+
+            <details class="ca-details">
+                <summary>{% trans "Set it up by hand instead" %}</summary>
+                <div class="ca-details__body">
+                    <div class="ca-block">
+                        <div class="ca-block__head">
+                            <span class="ca-muted">{% trans "Already have the repository checked out? Put these lines in its .env file:" %}</span>
+                            <button type="button" class="ca-btn ca-btn--ghost ca-btn--sm" data-copy="ca-env">
+                                <span class="material-symbols-outlined">content_copy</span><span data-label>{% trans "Copy" %}</span>
+                            </button>
+                        </div>
+                        <pre class="ca-code" id="ca-env">{{ result.env_file }}</pre>
+                    </div>
+                    <div class="ca-block">
+                        <div class="ca-block__head">
+                            <span class="ca-muted">{% trans "Or add this entry to your MCP client's config, replacing PYTHON and INSTALL_DIR with real paths:" %}</span>
+                            <button type="button" class="ca-btn ca-btn--ghost ca-btn--sm" data-copy="ca-config">
+                                <span class="material-symbols-outlined">content_copy</span><span data-label>{% trans "Copy" %}</span>
+                            </button>
+                        </div>
+                        <pre class="ca-code" id="ca-config">{{ result.client_config }}</pre>
+                    </div>
+                    <p class="ca-muted">
+                        {% blocktrans trimmed with url=result.health_url %}
+                            To check a token by hand, request {{ url }} with the header
+                            <code>Authorization: Token &lt;key&gt;</code>. It should report <code>"authenticated": true</code>.
+                        {% endblocktrans %}
+                    </p>
+                </div>
+            </details>
+        </section>
+    {% endif %}
+
+    <div class="ca-grid">
+
+        {# -------------------------------------------------------------- #}
+        {# Create                                                          #}
+        {# -------------------------------------------------------------- #}
+        <section class="ca-card">
+            <h2><span class="material-symbols-outlined">key</span>{% trans "Create a token" %}</h2>
+
+            <form method="post" novalidate style="display:flex;flex-direction:column;gap:16px">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+
+                {% for error in form.non_field_errors %}
+                    <p class="ca-error">{{ error }}</p>
+                {% endfor %}
+
+                <div class="ca-field">
+                    <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                    <input type="text"
+                           name="{{ form.name.html_name }}"
+                           id="{{ form.name.id_for_label }}"
+                           value="{{ form.name.value|default_if_none:'' }}"
+                           maxlength="{{ form.name.field.max_length }}"
+                           placeholder="{{ form.name.field.widget.attrs.placeholder }}"
+                           autocomplete="off"
+                           required
+                           class="ca-input{% if form.name.errors %} has-error{% endif %}">
+                    {% for error in form.name.errors %}
+                        <p class="ca-error">{{ error }}</p>
+                    {% endfor %}
+                    <p class="ca-muted">{{ form.name.help_text }}</p>
+                </div>
+
+                <div class="ca-check">
+                    <input type="checkbox"
+                           name="{{ form.replace.html_name }}"
+                           id="{{ form.replace.id_for_label }}"
+                           {% if form.replace.value %}checked{% endif %}>
+                    <div>
+                        <label for="{{ form.replace.id_for_label }}">{{ form.replace.label }}</label>
+                        <p class="ca-muted">{{ form.replace.help_text }}</p>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="ca-btn ca-btn--primary">
+                        <span class="material-symbols-outlined">bolt</span>{% trans "Create token and setup prompt" %}
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        {# -------------------------------------------------------------- #}
+        {# Existing agents                                                 #}
+        {# -------------------------------------------------------------- #}
+        <section class="ca-card">
+            <h2><span class="material-symbols-outlined">hub</span>{% trans "Connected agents" %}</h2>
+
+            {% if connections %}
+                <ul class="ca-list">
+                    {% for connection in connections %}
+                        <li>
+                            <div style="min-width:0">
+                                <span class="ca-list__name">{{ connection.username }}</span>
+                                <span class="ca-muted">{{ connection.masked_key }} &middot; {% blocktrans with date=connection.created|date:"j M Y" %}created {{ date }}{% endblocktrans %}</span>
+                            </div>
+                            <div class="ca-list__actions">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="show">
+                                    <input type="hidden" name="username" value="{{ connection.username }}">
+                                    <button type="submit" class="ca-btn ca-btn--ghost ca-btn--sm">
+                                        <span class="material-symbols-outlined">description</span>{% trans "Setup prompt" %}
+                                    </button>
+                                </form>
+                                <form method="post" data-confirm="{% blocktrans with name=connection.username %}Revoke the token for {{ name }}? That agent will stop working immediately.{% endblocktrans %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="revoke">
+                                    <input type="hidden" name="username" value="{{ connection.username }}">
+                                    <button type="submit" class="ca-btn ca-btn--danger ca-btn--sm">{% trans "Revoke" %}</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="ca-empty">
+                    <span class="material-symbols-outlined" style="font-size:28px;color:var(--color-base-400)">smart_toy</span>
+                    <strong>{% trans "No agents connected yet" %}</strong>
+                    <span class="ca-muted">{% trans "Create a token on the left to connect the first one." %}</span>
+                </div>
+            {% endif %}
+
+            <p class="ca-muted">
+                {% trans "Revoking deletes the token; the agent's next request is refused." %}
+                <a href="{{ tokens_url }}" class="ca-link">{% trans "All API tokens" %} &rarr;</a>
+            </p>
+        </section>
+    </div>
+
+    {# ------------------------------------------------------------------ #}
+    {# How it works                                                        #}
+    {# ------------------------------------------------------------------ #}
+    <section class="ca-card ca-how">
+        <div class="ca-how__item">
+            <span class="material-symbols-outlined">download</span>
+            <div>
+                <strong>{% trans "Installs itself" %}</strong>
+                <span class="ca-muted">{% blocktrans with dir=install_dir %}The agent downloads only the small MCP server into {{ dir }}, with two Python packages. Nothing else on the computer changes.{% endblocktrans %}</span>
+            </div>
+        </div>
+        <div class="ca-how__item">
+            <span class="material-symbols-outlined">verified_user</span>
+            <div>
+                <strong>{% trans "Same rules as the admin" %}</strong>
+                <span class="ca-muted">{% trans "Every change goes through this site's API, with the same validation and SEO generation as editing here." %}</span>
+            </div>
+        </div>
+        <div class="ca-how__item">
+            <span class="material-symbols-outlined">key_off</span>
+            <div>
+                <strong>{% trans "Revoke any time" %}</strong>
+                <span class="ca-muted">{% trans "Agent accounts have no password and cannot log in here. Revoke a token and that agent is cut off at once." %}</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function () {
+        function copyText(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text);
+            }
+            // Fallback for plain-http development servers.
+            var area = document.createElement("textarea");
+            area.value = text;
+            area.setAttribute("readonly", "");
+            area.style.position = "fixed";
+            area.style.opacity = "0";
+            document.body.appendChild(area);
+            area.select();
+            try { document.execCommand("copy"); } finally { document.body.removeChild(area); }
+            return Promise.resolve();
+        }
+
+        document.querySelectorAll("[data-copy]").forEach(function (button) {
+            var label = button.querySelector("[data-label]");
+            var original = label ? label.textContent : "";
+            button.addEventListener("click", function () {
+                var source = document.getElementById(button.getAttribute("data-copy"));
+                if (!source) { return; }
+                copyText(source.textContent).then(function () {
+                    button.classList.add("is-copied");
+                    if (label) { label.textContent = "{% trans 'Copied' %}"; }
+                    setTimeout(function () {
+                        button.classList.remove("is-copied");
+                        if (label) { label.textContent = original; }
+                    }, 2000);
+                });
+            });
+        });
+
+        document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+            form.addEventListener("submit", function (event) {
+                if (!window.confirm(form.getAttribute("data-confirm"))) { event.preventDefault(); }
+            });
+        });
+
+        var result = document.getElementById("result");
+        if (result) { result.scrollIntoView({ behavior: "smooth", block: "start" }); }
+    })();
+</script>
+{% endblock %}

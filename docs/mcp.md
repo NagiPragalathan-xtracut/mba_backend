@@ -9,6 +9,38 @@ validation as the admin — it cannot create malformed content.
 
 ---
 
+## Quick setup from the admin (recommended)
+
+No terminal needed on the server side:
+
+1. Open the admin and click **Create MCP token** on the dashboard (also under
+   **Access → Connect AI agent**, or the button on **API Tokens**). The page
+   lives at `/admin/authtoken/tokenproxy/connect/`.
+2. Give the agent a name, e.g. `claude-desktop-office`. It becomes an
+   `mcp-claude-desktop-office` account with **no password** — it can act only
+   through its token, never log in to the admin.
+3. Click **Copy prompt** and paste it into Claude Code, Claude Desktop, Cursor,
+   Codex, VS Code's agent mode or any agent that can run commands.
+
+The prompt makes the agent install the server by itself: it clones
+`mcp_server/` into `~/.mcp-servers/mbu-backend`, creates a virtualenv with only
+`mcp` and `httpx` (no Django), checks the token against `/api/v1/health/`,
+registers a `mbu-backend` stdio server with its own MCP client, and reports back.
+
+The page also lists every connected agent, with **Setup prompt** (show an
+agent's prompt again) and **Revoke** (delete its token; the agent is cut off at
+once). Only admins with permission to add both users and tokens can open it.
+The full key is shown only on the page right after you create or select it.
+It never appears in a URL.
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `AGENT_SETUP_REPO_URL` | this repository on GitHub | Where the prompt tells agents to download the server |
+| `AGENT_SETUP_REPO_BRANCH` | `main` | Branch to clone |
+| `AGENT_SETUP_API_BASE_URL` | *(empty — the URL the admin was opened on)* | API URL written into the prompt |
+
+The manual steps below do the same thing by hand.
+
 ## Setup
 
 ### 1. Issue a token

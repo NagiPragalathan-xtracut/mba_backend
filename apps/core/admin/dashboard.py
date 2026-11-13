@@ -80,16 +80,26 @@ def _recent_activity(limit: int = 8):
 
 def dashboard_callback(request, context):
     """Inject dashboard data into the admin index context."""
+    from .connect_agent import can_connect_agent, connect_agent_url
+
     try:
+        can_connect = can_connect_agent(request.user)
+        quick_links = [
+            {"title": "API documentation", "icon": "api", "url": "/api/docs/"},
+            {"title": "OpenAPI schema", "icon": "data_object", "url": "/api/schema/"},
+            {"title": "API tokens", "icon": "key", "url": reverse("admin:authtoken_tokenproxy_changelist")},
+        ]
+        if can_connect:
+            quick_links.insert(0, {"title": "Connect an AI agent", "icon": "smart_toy", "url": connect_agent_url()})
+
         context.update(
             {
                 "stats": _content_stats(),
                 "recent_activity": _recent_activity(),
-                "quick_links": [
-                    {"title": "API documentation", "icon": "api", "url": "/api/docs/"},
-                    {"title": "OpenAPI schema", "icon": "data_object", "url": "/api/schema/"},
-                    {"title": "API tokens", "icon": "key", "url": reverse("admin:authtoken_tokenproxy_changelist")},
-                ],
+                "quick_links": quick_links,
+                # The "Create MCP token" banner - only for admins who may use it.
+                "can_connect_agent": can_connect,
+                "connect_agent_url": connect_agent_url() if can_connect else "",
             }
         )
     except Exception:  # noqa: BLE001
@@ -99,4 +109,5 @@ def dashboard_callback(request, context):
         context.setdefault("stats", [])
         context.setdefault("recent_activity", [])
         context.setdefault("quick_links", [])
+        context.setdefault("can_connect_agent", False)
     return context

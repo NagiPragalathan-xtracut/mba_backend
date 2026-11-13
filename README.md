@@ -54,6 +54,13 @@ Then open:
 
 ## Connecting Claude
 
+**From the admin (easiest):** click **Create MCP token** on the dashboard, name
+the agent, and paste the generated setup prompt into Claude Code, Claude
+Desktop, Cursor, Codex or any agent that can run commands. The agent installs
+and connects the MCP server by itself.
+
+**From the command line:**
+
 ```bash
 # Issue a token for the MCP server
 python manage.py create_api_token --username mcp-bot --create-user
@@ -88,7 +95,7 @@ filters, views, urls) and `migrations/`.
 
 ```bash
 python manage.py runserver                 # Development server
-python manage.py test tests                # Run the test suite (140 tests)
+python manage.py test tests                # Run the test suite (172 tests)
 python manage.py makemigrations            # After changing a model
 python manage.py migrate                   # Apply migrations
 python manage.py seed_content              # Load generic sample content

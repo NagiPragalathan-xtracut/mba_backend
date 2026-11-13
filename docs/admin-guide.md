@@ -15,10 +15,14 @@ The landing page shows:
 - **Recently edited** — the last few things anyone changed, newest first, with
   a red *Draft* badge on anything not yet published.
 - **Developer tools** — API documentation and access tokens.
+- **Create MCP token** (administrators only) — connects Claude or another AI
+  agent. Name the agent, click **Copy prompt** and paste it into the agent; it
+  sets itself up. The same page lists connected agents and lets you revoke them.
+  See [MCP integration](mcp.md#quick-setup-from-the-admin-recommended).
 
 The left sidebar groups everything: **Content** (Events, Blogs, Faculty),
 **Taxonomy** (Departments, Categories, Designations) and **Access** (Users,
-Groups, API Tokens).
+Groups, API Tokens, Connect AI agent).
 
 ## Before you start: set up the taxonomy
 

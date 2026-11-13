@@ -3,11 +3,15 @@ Issue the DRF token the MCP server authenticates with.
 
     python manage.py create_api_token --username mcp-bot --create-user
     python manage.py create_api_token --username admin --rotate
+
+The admin's "Connect an AI agent" page does the same from the browser; both go
+through `apps.core.tokens.issue_token`.
 """
 
-from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from rest_framework.authtoken.models import Token
+
+from apps.core.tokens import TokenIssueError, issue_token
 
 
 class Command(BaseCommand):
@@ -27,40 +31,29 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        User = get_user_model()
         username = options["username"]
+        had_token = Token.objects.filter(user__username=username).exists()
 
         try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            if not options["create_user"]:
-                raise CommandError(
-                    f"No user named '{username}'. Re-run with --create-user to create one, "
-                    f"or use an existing username."
-                )
-            # An unusable password means this account can only ever act through
-            # its API token - it cannot be used to log into the admin.
-            user = User.objects.create_user(username=username, is_staff=True)
-            user.set_unusable_password()
-            user.save()
+            issued = issue_token(username, create_user=options["create_user"], rotate=options["rotate"])
+        except TokenIssueError as exc:
+            raise CommandError(str(exc)) from exc
+
+        if issued.user_created:
             self.stdout.write(self.style.SUCCESS(f"Created user '{username}' (staff, token-only access)."))
+        if issued.rotated:
+            self.stdout.write(self.style.WARNING("Previous token revoked."))
 
-        if options["rotate"]:
-            deleted, _ = Token.objects.filter(user=user).delete()
-            if deleted:
-                self.stdout.write(self.style.WARNING("Previous token revoked."))
-
-        token, created = Token.objects.get_or_create(user=user)
-
+        key = issued.token.key
         self.stdout.write("")
-        self.stdout.write(self.style.SUCCESS(f"Token for '{username}': {token.key}"))
+        self.stdout.write(self.style.SUCCESS(f"Token for '{username}': {key}"))
         self.stdout.write("")
         self.stdout.write("Add it to your .env file:")
-        self.stdout.write(f"  MBU_API_TOKEN={token.key}")
+        self.stdout.write(f"  MBU_API_TOKEN={key}")
         self.stdout.write("")
         self.stdout.write("Use it in requests as:")
-        self.stdout.write(f"  Authorization: Token {token.key}")
+        self.stdout.write(f"  Authorization: Token {key}")
 
-        if not created and not options["rotate"]:
+        if had_token and not options["rotate"]:
             self.stdout.write("")
             self.stdout.write(self.style.WARNING("This is the existing token. Use --rotate to replace it."))

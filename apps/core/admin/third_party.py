@@ -21,9 +21,15 @@ from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
+from django.shortcuts import redirect
+from django.urls import path
 from unfold.admin import ModelAdmin
-from unfold.decorators import display
+from unfold.decorators import action, display
+from unfold.enums import ActionVariant
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
+
+from .connect_agent import URL_NAME as CONNECT_AGENT_URL_NAME
+from .connect_agent import ConnectAgentView, can_connect_agent, connect_agent_url
 
 
 def _unregister(model) -> None:
@@ -116,6 +122,27 @@ if TokenProxy is not None:
         autocomplete_fields = ["user"]
         readonly_fields = ["key", "created"]
         compressed_fields = True
+        actions_list = ["connect_agent"]
+
+        def get_urls(self):
+            # Before the stock URLs: their `<path:object_id>/` would swallow it.
+            view = self.admin_site.admin_view(ConnectAgentView.as_view(model_admin=self))
+            return [path("connect/", view, name=CONNECT_AGENT_URL_NAME), *super().get_urls()]
+
+        # A method rather than dotted permission names: Unfold's system check
+        # looks dotted names up in the database, which breaks `migrate` on a
+        # fresh one.
+        def has_connect_agent_permission(self, request):
+            return can_connect_agent(request.user)
+
+        @action(
+            description="Connect an AI agent",
+            icon="smart_toy",
+            variant=ActionVariant.PRIMARY,
+            permissions=["connect_agent"],
+        )
+        def connect_agent(self, request):
+            return redirect(connect_agent_url())
 
         fieldsets = (
             (

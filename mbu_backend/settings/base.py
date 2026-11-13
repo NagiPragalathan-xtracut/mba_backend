@@ -341,6 +341,18 @@ CKEDITOR_CONFIGS = {
 }
 
 # ---------------------------------------------------------------------------
+# "Connect an AI agent" admin page
+# ---------------------------------------------------------------------------
+# The setup prompt tells an agent where to download the MCP server and which
+# API to connect it to. Leave AGENT_SETUP_API_BASE_URL empty to use the address
+# the admin was opened on - right for most deployments.
+AGENT_SETUP_REPO_URL = env.str(
+    "AGENT_SETUP_REPO_URL", default="https://github.com/NagiPragalathan-xtracut/mba_backend.git"
+)
+AGENT_SETUP_REPO_BRANCH = env.str("AGENT_SETUP_REPO_BRANCH", default="main")
+AGENT_SETUP_API_BASE_URL = env.str("AGENT_SETUP_API_BASE_URL", default="").rstrip("/")
+
+# ---------------------------------------------------------------------------
 # Unfold - admin dashboard UI
 # ---------------------------------------------------------------------------
 
@@ -478,6 +490,13 @@ UNFOLD = {
                         "icon": "key",
                         "link": reverse_lazy("admin:authtoken_tokenproxy_changelist"),
                         "permission": _navigation_visible,
+                    },
+                    {
+                        "title": "Connect AI agent",
+                        "icon": "smart_toy",
+                        "link": reverse_lazy("admin:authtoken_tokenproxy_connect"),
+                        # Dotted path: Unfold imports it lazily, after the app registry is ready.
+                        "permission": "apps.core.admin.connect_agent.sidebar_visible",
                     },
                 ],
             },

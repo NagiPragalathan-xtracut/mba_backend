@@ -16,8 +16,35 @@
     {% include "unfold/helpers/site_branding.html" %}
 {% endblock %}
 
+{% block extrastyle %}
+    {{ block.super }}
+    {% if can_connect_agent %}
+        {% include "admin/includes/connect_agent_styles.html" %}
+    {% endif %}
+{% endblock %}
+
 {% block content %}
     <div class="flex flex-col gap-8">
+
+        {# ---------------------------------------------------------- #}
+        {# Connect an AI agent (admins who can issue tokens only)      #}
+        {# ---------------------------------------------------------- #}
+        {% if can_connect_agent %}
+            <section class="ca">
+                <div class="ca-hero ca-banner">
+                    <div class="ca-banner__text">
+                        <div class="ca-hero__icon"><span class="material-symbols-outlined">smart_toy</span></div>
+                        <div>
+                            <h2>{% trans "Manage content with Claude or any AI agent" %}</h2>
+                            <p>{% trans "Create an MCP token and get a one-paste setup prompt. The agent installs and connects itself." %}</p>
+                        </div>
+                    </div>
+                    <a href="{{ connect_agent_url }}" class="ca-btn ca-btn--primary">
+                        <span class="material-symbols-outlined">key</span>{% trans "Create MCP token" %}
+                    </a>
+                </div>
+            </section>
+        {% endif %}
 
         {# ---------------------------------------------------------- #}
         {# Content counters                                            #}
