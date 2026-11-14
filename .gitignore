@@ -57,3 +57,8 @@ htmlcov/
 *~
 .DS_Store
 Thumbs.db
+
+# Local one-off helpers and downloaded import bundles
+*.local.py
+*.local.ps1
+tmp/
