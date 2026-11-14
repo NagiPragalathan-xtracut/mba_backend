@@ -29,3 +29,7 @@ fi
 $PYTHON -m pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
 
 $PYTHON manage.py collectstatic --noinput --clear
+
+# Bootstrap an admin login + API token when DJANGO_SUPERUSER_* are set in the
+# Vercel project. A database hiccup must not fail the static build.
+$PYTHON manage.py ensure_admin || echo "ensure_admin failed (non-fatal)"

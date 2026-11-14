@@ -53,6 +53,8 @@ def register(mcp, client: MBUClient) -> None:
         category: str,
         content: str,
         departments: str | None = None,
+        courses: str | None = None,
+        slug: str | None = None,
         summary: str | None = None,
         event_date: str | None = None,
         end_date: str | None = None,
@@ -78,6 +80,8 @@ def register(mcp, client: MBUClient) -> None:
                 HTML is stored as given.
             departments: Comma-separated department slugs, e.g. "cse, ece".
                 Leave empty for university-wide events.
+            courses: Comma-separated course slugs, e.g. "mba". Optional.
+            slug: URL slug. Generated from the title when omitted.
             summary: Short teaser for listing cards. Derived from the content when omitted.
             event_date: Start date as YYYY-MM-DD.
             end_date: Last day for multi-day events, as YYYY-MM-DD. Must not precede event_date.
@@ -88,9 +92,11 @@ def register(mcp, client: MBUClient) -> None:
         """
         payload = {
             "title": title,
+            "slug": slug,
             "category": category,
             "content": as_paragraphs(content),
             "departments": split_csv(departments),
+            "courses": split_csv(courses),
             "summary": summary,
             "event_date": event_date,
             "end_date": end_date,
@@ -108,6 +114,7 @@ def register(mcp, client: MBUClient) -> None:
         category: str | None = None,
         content: str | None = None,
         departments: str | None = None,
+        courses: str | None = None,
         summary: str | None = None,
         event_date: str | None = None,
         end_date: str | None = None,
@@ -124,6 +131,7 @@ def register(mcp, client: MBUClient) -> None:
             category: New category slug.
             content: New description (plain text or HTML).
             departments: Comma-separated department slugs. Replaces the whole set.
+            courses: Comma-separated course slugs. Replaces the whole set.
             summary: New listing teaser.
             event_date: New start date, YYYY-MM-DD.
             end_date: New end date, YYYY-MM-DD.
@@ -137,6 +145,7 @@ def register(mcp, client: MBUClient) -> None:
             "category": category,
             "content": as_paragraphs(content),
             "departments": split_csv(departments),
+            "courses": split_csv(courses),
             "summary": summary,
             "event_date": event_date,
             "end_date": end_date,
